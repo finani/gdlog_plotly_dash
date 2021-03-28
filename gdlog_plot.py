@@ -1,38 +1,59 @@
+#!/usr/bin/env python3
+ 
+import sys
 import pandas as pd
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("gdLog_210323_172626.csv")
-df.columns = df.columns.str.strip()
+pd.set_option('display.max_seq_items', None)
 
-data_range = range(0, 200)
-#data_range = range(len(df))
+df = []
+data_range = []
 
-df_rpy = df.loc[data_range,['rosTime','rpy_0','rpy_1','rpy_2']]
-df_rpy.plot(x='rosTime')
-plt.grid(b=True)
-plt.title('[rpy]   '+ str(data_range))
-plt.show()
+def df_picked_plot(df_, title_, data_num_, ax_):
+    plot_header = ['rosTime']
+    for i in range(data_num_):
+        plot_header.append(title_+'_'+str(i))
+    df_picked = df_.loc[data_range, plot_header]
 
-df_velNed = df.loc[data_range,['rosTime','velNed_0','velNed_1','velNed_2']]
-df_velNed.plot(x='rosTime')
-plt.grid(b=True)
-plt.title('[velNed]   '+ str(data_range))
-plt.show()
+    df_picked_plot = df_picked.plot.line(ax=ax_,
+        sharex=True,
+        grid=True,
+        title='['+title_+']     ('+str(data_range.start)+' - ' +str(data_range.stop)+')', \
+        x='rosTime',
+        linewidth=2
+        )
 
-df_posNed = df.loc[data_range,['rosTime','posNed_0','posNed_1','posNed_2']]
-df_posNed.plot(x='rosTime')
-plt.grid(b=True)
-plt.title('[posNed]   '+ str(data_range))
-plt.show()
+if __name__ == '__main__':
+    if len(sys.argv) == 1: # for test run
+        csv_path = "gdLog_210323_172626_edited.csv"
+        print("Test run gdlog_plot.py using \'gdLog_210323_172626.csv\'\n")
+        print("Usage: python3 gdlog_plot.py path_of_your_csv_file\n")
+    elif len(sys.argv) == 2:
+        csv_path = sys.argv[1]
+    else:
+        raise SystemExit('Usage: python3 %s path_of_your_csv_file' % sys.argv[0])
 
-df_accBody = df.loc[data_range,['rosTime','accBody_0','accBody_1','accBody_2']]
-df_accBody.plot(x='rosTime')
-plt.grid(b=True)
-plt.title('[accBody]   '+ str(data_range))
-plt.show()
+    df = pd.read_csv(csv_path)
+    df.columns = df.columns.str.strip()
+    print(df.columns)
 
-df_pqr = df.loc[data_range,['rosTime','pqr_0','pqr_1','pqr_2']]
-df_pqr.plot(x='rosTime')
-plt.grid(b=True)
-plt.title('[pqr]   '+ str(data_range))
-plt.show()
+    data_range = range(0, 200)
+    # data_range = range(len(df))
+
+    fig, axes = plt.subplots(nrows=3)
+    df_picked_plot(df, 'rpy', 3, axes[0])
+    df_picked_plot(df, 'velNed', 3, axes[1])
+    df_picked_plot(df, 'posNed', 3, axes[2])
+
+    fig, axes = plt.subplots(nrows=2)
+    df_picked_plot(df, 'accBody', 3, axes[0])
+    df_picked_plot(df, 'pqr', 3, axes[1])
+
+    plt.show()
+
+# make interface
+# show list of data
+# get data number from enum class
+# set plots from user input
+# show
+# loop
