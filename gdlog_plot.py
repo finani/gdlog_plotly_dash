@@ -16,8 +16,9 @@ signal.signal(signal.SIGINT,signal_handler)
 class GDLOG_PLOTTER:
     def __init__(self, csv_path_):
         self.my_path = os.getcwd()
-        self.save_path = self.my_path+'/plot/'
         self.csv_path = csv_path_
+        self.csv_file_name = self.csv_path.split('/')[-1].split('.')[0]
+        self.save_path = self.my_path + '/' + self.csv_file_name + '/'
         self.df = pd.read_csv(self.csv_path)
         self.df.columns = self.df.columns.str.strip()
         self.df_header_list = self.df.columns.tolist()
@@ -27,11 +28,14 @@ class GDLOG_PLOTTER:
         self.preset_dict = {
             'a' : ['rpy', 'velNed', 'posNed'],
             'b' : ['accBody', 'pqr'],
-            'c' : ['vbx']
+            'c' : ['vbx'],
+            'px4' : ['fcMcMode', 'rpy', 'velNed', 'posNed']
         }
         self.fig_list = []
 
         self.header_list_to_dict()
+
+        # TODO: rosTime -> readable time
 
     def df_picked_plot(self, title_, data_num_):
         plot_header = ['rosTime']
@@ -72,9 +76,6 @@ class GDLOG_PLOTTER:
             linewidth=2
             )
 
-    def plot_using_preset_name(self, title_):
-        self.plot_using_data_name_list(self.preset_dict[title_])
-
     def plot_using_data_name_list(self, title_list_):
         axes_length = len(title_list_)
         if axes_length == 1:
@@ -87,6 +88,9 @@ class GDLOG_PLOTTER:
             for i in range(axes_length):
                 self.df_picked_subplot(title_list_[i], self.df_header_dict[title_list_[i]], axes[i])
             plt.show(block=False)
+
+    def plot_using_preset_name(self, title_):
+        self.plot_using_data_name_list(self.preset_dict[title_])
 
     def header_list_to_dict(self):        
         for title in self.df_header_list:
@@ -127,19 +131,19 @@ class GDLOG_PLOTTER:
         self.show_log_data()
 
         print("\n\
-[Command]\n\
-\t[help] Open Guide\n\
+[Command]\n\n\
+\t[help] Open Guide\n\n\
 \t[show] Plot preset\n\
-\t\t[preset_name1] [preset_name2] ...\n\
+\t\t[preset_name1] [preset_name2] ...\n\n\
 \t[plot] Plot data from header\n\
-\t\t[data_name1] [data_name2] ...\n\
-\t[range] Set range [" + str(self.data_range.start) + "-" + str(self.data_range.stop)+"], [max] " + str(self.df_length) + "\n\
-\t\t[start_number] [end_number]\n\
-\t[save] Save plot [default] " + self.csv_path.split('.')[0] + ".png\n\
+\t\t[data_name1] [data_name2] ...\n\n\
+\t[range] Set range   [cur] " + str(self.data_range.start) + "-" + str(self.data_range.stop)+", [max] " + str(self.df_length) + "\n\
+\t\t[start_number] [end_number]\n\n\
+\t[save] Save plot (.png)\n\
 \t\t[all] save all figures\n\
-\t\t[png_file_name_to_save] save the recent figure\n\
+\t\t[png_file_name_to_save] save the recent figure\n\n\
 \t[clear] Clear plots\n\n\
-\t[q] Close gdlog_plotter\n\
+\t[q] Close gdlog_plotter\n\n\
 \n\tUsage: [show, plot, range, save, clear, q] sub_command_data\n\n")
 
     def run(self):
@@ -191,14 +195,14 @@ class GDLOG_PLOTTER:
                 if data_length == 1:
                     if input_list[1] == 'all':
                         for i in range(len(self.fig_list)):
-                            self.fig_list[i].savefig(self.save_path+self.csv_path.split('.')[0] + "_" + str(i) + ".png")
-                            print("Saved: " + self.csv_path.split('.')[0] + "_" + str(i) + ".png")
+                            self.fig_list[i].savefig(self.save_path + "fig_" + str(i) + ".png")
+                            print("Saved: " + self.save_path + "fig_" + str(i) + ".png")
                     else:
-                            self.fig_list[-1].savefig(self.save_path+input_list[1] + ".png")
-                            print("Saved: " + input_list[1] + ".png")
+                            self.fig_list[-1].savefig(self.save_path + input_list[1] + ".png")
+                            print("Saved: " + self.save_path + input_list[1] + ".png")
                 else:
-                    self.fig_list[-1].savefig(self.save_path+self.csv_path.split('.')[0] + ".png")
-                    print("Saved: " + self.csv_path.split('.')[0] + ".png")
+                    self.fig_list[-1].savefig(self.save_path + "fig.png")
+                    print("Saved: " + self.save_path + "fig.png")
 
         elif input_list[0] == 'clear':
             plt.close('all')
@@ -227,6 +231,8 @@ if __name__ == '__main__':
 
     gdlog_plotter = GDLOG_PLOTTER(csv_path)
     gdlog_plotter.show_guide()
+    print(csv_path)
+    print(gdlog_plotter.csv_file_name)
 
     while(True):
         gdlog_plotter.run()
