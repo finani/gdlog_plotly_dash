@@ -293,8 +293,6 @@ if __name__ == '__main__':
 
     gdlog_plotter = GDLOG_PLOTTER(csv_path)
     gdlog_plotter.show_guide()
-    print(csv_path)
-    print(gdlog_plotter.csv_file_name)
 
     while(True):
         gdlog_plotter.run()
