@@ -20,6 +20,7 @@ class GDLOG_PLOTTER:
         self.csv_file_name = self.csv_path.split('/')[-1].split('.')[0]
         self.save_path = self.my_path + '/' + self.csv_file_name + '/'
         self.df = pd.read_csv(self.csv_path)
+        self.df["rosTimeDiff"] = self.df["rosTime"] - self.df["rosTime"][0]
         self.df.columns = self.df.columns.str.strip()
         self.df_header_list = self.df.columns.tolist()
         self.df_header_dict = {}
@@ -28,22 +29,26 @@ class GDLOG_PLOTTER:
         self.preset_dict = {
             'a' : ['rpy', 'velNed', 'posNed'],
             'b' : ['accBody', 'pqr'],
-            'c' : ['vbx'],
+            'c' : ['vbxyz'],
             'px4' : ['fcMcMode', 'rpy', 'velNed', 'posNed']
         }
         self.fig_list = []
 
         self.header_list_to_dict()
 
-        # TODO: rosTime -> readable time
-
     def df_picked_plot(self, title_, data_num_):
-        plot_header = ['rosTime']
+        plot_header = ['rosTimeDiff']
         if data_num_ == 1:
-            plot_header.append(title_)
+            if (self.df_header_dict[title_][1] == "None"):
+                plot_header.append(title_)
+            else:
+                plot_header.append(title_+'_'+self.df_header_dict[title_][1])
         elif data_num_ > 1:
             for i in range(data_num_):
-                plot_header.append(title_+'_'+str(i))
+                if (self.df_header_dict[title_][1+i] == "None"):
+                    plot_header.append(title_+'_'+str(i))
+                else:
+                    plot_header.append(title_+'_'+self.df_header_dict[title_][1+i]+'_'+str(i))
         else:
             print("Error: data_num_ is invaild")
         df_picked = self.df.loc[self.data_range, plot_header]
@@ -52,55 +57,78 @@ class GDLOG_PLOTTER:
             sharex=True,
             grid=True,
             title=title_+'     ['+str(self.data_range.start)+' - ' +str(self.data_range.stop)+']',
-            x='rosTime', # TODO: time? count?
+            x='rosTimeDiff',
             linewidth=2
             )
         return df_picked_plot.get_figure()
 
     def df_picked_subplot(self, title_, data_num_, ax_):
-        plot_header = ['rosTime']
+        plot_header = ['rosTimeDiff']
         if data_num_ == 1:
-            plot_header.append(title_)
+            if (self.df_header_dict[title_][1] == "None"):
+                plot_header.append(title_)
+            else:
+                plot_header.append(title_+'_'+self.df_header_dict[title_][1])
         elif data_num_ > 1:
             for i in range(data_num_):
-                plot_header.append(title_+'_'+str(i))
+                if (self.df_header_dict[title_][1+i] == "None"):
+                    plot_header.append(title_+'_'+str(i))
+                else:
+                    plot_header.append(title_+'_'+self.df_header_dict[title_][1+i]+'_'+str(i))
         else:
             print("Error: data_num_ is invaild")
         df_picked = self.df.loc[self.data_range, plot_header]
 
-        df_picked_plot = df_picked.plot.line(ax=ax_,
+        df_picked_subplot = df_picked.plot.line(ax=ax_,
             sharex=True,
             grid=True,
             title=title_+'     ['+str(self.data_range.start)+' - ' +str(self.data_range.stop)+']',
-            x='rosTime', # TODO: time? count?
+            x='rosTimeDiff',
             linewidth=2
             )
 
     def plot_using_data_name_list(self, title_list_):
         axes_length = len(title_list_)
         if axes_length == 1:
-            fig = self.df_picked_plot(title_list_[0], self.df_header_dict[title_list_[0]])
+            fig = self.df_picked_plot(title_list_[0], self.df_header_dict[title_list_[0]][0])
             self.fig_list.append(fig)
             plt.show(block=False)
         elif axes_length > 1:
             fig, axes = plt.subplots(nrows=axes_length)
             self.fig_list.append(fig)
             for i in range(axes_length):
-                self.df_picked_subplot(title_list_[i], self.df_header_dict[title_list_[i]], axes[i])
+                self.df_picked_subplot(title_list_[i], self.df_header_dict[title_list_[i]][0], axes[i])
             plt.show(block=False)
 
     def plot_using_preset_name(self, title_):
         self.plot_using_data_name_list(self.preset_dict[title_])
 
-    def header_list_to_dict(self):        
+    def header_list_to_dict(self):
         for title in self.df_header_list:
-            if title[-1].isdigit():
-                try:
-                    self.df_header_dict[title[0:-2]] += 1
-                except:
-                    self.df_header_dict[title[0:-2]] = 1
+            title_splited = title.split('_')
+            self.df_header_dict.setdefault(title_splited[0], [])
+            len_title_splited = len(title_splited)
+            if (len_title_splited == 1):
+                self.df_header_dict[title_splited[0]].append(1)
+                self.df_header_dict[title_splited[0]].append("None")
+            elif (len_title_splited == 2):
+                if title_splited[-1].isdigit():
+                    try:
+                        self.df_header_dict[title_splited[0]][0] += 1
+                    except:
+                        self.df_header_dict[title_splited[0]].append(1)
+                    self.df_header_dict[title_splited[0]].append("None")
+                else:
+                    self.df_header_dict[title_splited[0]].append(1)
+                    self.df_header_dict[title_splited[0]].append(title_splited[-1])
+            elif (len_title_splited == 3):
+                    try:
+                        self.df_header_dict[title_splited[0]][0] += 1
+                    except:
+                        self.df_header_dict[title_splited[0]].append(1)
+                    self.df_header_dict[title_splited[0]].append(title_splited[-2])
             else:
-                self.df_header_dict[title] = 1
+                print("CSV file includes invalid data_name: " + title)
 
     def show_preset(self):
         print("[preset_name]\n")
@@ -109,20 +137,27 @@ class GDLOG_PLOTTER:
         print("")
 
     def show_log_data(self):
-        print("[data_name]\n")
-        line_count = 1
-        for item in sorted(self.df_header_dict.items()):
-            if line_count < 3:
-                print(item, end='\t')
-                if len(item[0]) < 9:
+        print("\n[data_name]\n")
+        column_count = 1
+        key_previous = 'a'
+        for key, value in sorted(self.df_header_dict.items()):
+            if key[0] != key_previous[0]:
+                key_previous = key
+                print("")
+                if (column_count != 1):
+                    print("")
+                column_count = 1
+            if column_count < 3:
+                print(key + ": " + str(value[0]), end='\t')
+                if len(key) < 5:
                     print("", end='\t\t')
-                elif len(item[0]) < 17:
+                elif len(key) < 13:
                     print("", end='\t')
-                line_count += 1
+                column_count += 1
             else:
-                print(item)
-                line_count = 1
-        print("")
+                print(key + ": " + str(value[0]))
+                column_count = 1
+        print("\n")
 
     def show_guide(self):
         print("Welcome to gdlog_plotter\n")
@@ -145,6 +180,29 @@ class GDLOG_PLOTTER:
 \t[clear] Clear plots\n\n\
 \t[q] Close gdlog_plotter\n\n\
 \n\tUsage: [show, plot, range, save, clear, q] sub_command_data\n\n")
+
+    def show_debug_data(self):
+        print("\n[data_name]\n")
+        column_count = 1
+        key_previous = 'a'
+        for key, value in sorted(self.df_header_dict.items()):
+            if key[0] != key_previous[0]:
+                key_previous = key
+                print("")
+                if (column_count != 1):
+                    print("")
+                column_count = 1
+            if column_count < 3:
+                print(key + ": " + str(value), end='\t')
+                if len(key) < 5:
+                    print("", end='\t\t')
+                elif len(key) < 13:
+                    print("", end='\t')
+                column_count += 1
+            else:
+                print(key + ": " + str(value))
+                column_count = 1
+        print("\n")
 
     def run(self):
         input_raw = input("plotter> ")
@@ -209,6 +267,10 @@ class GDLOG_PLOTTER:
             self.fig_list.clear()
             print("Clear the self.fig_list")
 
+        elif input_list[0] == 'debug':
+            self.show_debug_data()
+            print("Show debug data")
+
         elif ('q' in input_list[0]) or ('Q' in input_list[0]):
             plt.close('all')
             self.fig_list.clear()
@@ -221,7 +283,7 @@ class GDLOG_PLOTTER:
 
 if __name__ == '__main__':
     if len(sys.argv) == 1: # for test run
-        csv_path = "gdLog_210323_172626_edited.csv"
+        csv_path = "gdLog_210323_172626.csv"
         print("Test run gdlog_plot.py using \'gdLog_210323_172626.csv\'\n")
         print("\tUsage: python3 gdlog_plot.py path_of_your_csv_file\n")
     elif len(sys.argv) == 2:
