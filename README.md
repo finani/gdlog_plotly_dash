@@ -60,59 +60,86 @@ Welcome to gdlog_plotter
 
 ('a', ['rpy', 'velNed', 'posNed'])
 ('b', ['accBody', 'pqr'])
-('c', ['vbx'])
+('c', ['vbxyz'])
+('px4', ['fcMcMode', 'rpy', 'velNed', 'posNed'])
+
 
 [data_name]
 
-('AcHorWarnAC', 1)              ('AcHorWarnAngle', 1)           ('AcHorWarnRange', 1)
-('AcVerWarnAC', 1)              ('AcVerWarnAngle', 1)           ('AcVerWarnRange', 1)
-('AcWarnStat', 1)               ('AcXRel', 1)                   ('AcYRel', 1)
-('AcZRel', 1)                   ('GpHealth', 1)                 ('GpsFusedNSV', 1)
-('GpsNSV', 1)                   ('GuideModeLongPidErr', 1)      ('GuideModeLongPidIgain', 1)
-('GuideModeLongPidRate', 1)     ('HeaveVelCmd', 1)              ('LatVelCmd', 1)
-('LidarAngle', 1)               ('LidarDist', 1)                ('LidarRaw', 8)
-('LongVelCmd', 1)               ('RtkHealthFlag', 1)            ('StdJobLongPidErr', 1)
-('StdJobLongPidIgain', 1)       ('StdJobLongPidRate', 1)        ('accBody', 3)
-('acousticTemp', 1)             ('bladeTravelDistance', 1)      ('cmdLatVelIgain', 1)
-('cmdLatVelMix', 1)             ('ctrlDeviceStatus', 1)         ('ctrlOp', 3)
-('ctrlOutputType', 1)           ('ctrlSetpointType', 1)         ('ctrlSp', 3)
-('ctrlStruct', 1)               ('ctrlUser', 1)                 ('errLatLid', 1)
-('errLatMix', 1)                ('errLatMixCov', 2)             ('errLatMixRate', 1)
-('errLatVis', 1)                ('fcMcMode', 1)                 ('flightMode', 1)
-('gimbalPitch', 1)              ('gimbalPitchCmd', 1)           ('gimbalRoll', 1)
-('gimbalRollCmd', 1)            ('gimbalYaw', 1)                ('gimbalYawCmd', 1)
-('gpsFix', 1)                   ('jobSeq', 1)                   ('jobType', 1)
-('missionType', 1)              ('nSat', 1)                     ('posCmdNed', 3)
-('posCtrlI_D', 1)               ('posCtrlI_E', 1)               ('posCtrlI_N', 1)
-('posGPS', 3)                   ('posGp', 3)                    ('posGpsFused', 3)
-('posNed', 3)                   ('posRTK', 3)                   ('pqr', 3)
-('rcPitch', 1)                  ('rcRoll', 1)                   ('rcThrottle', 1)
-('rcYaw', 1)                    ('rosTime', 1)                  ('rpdCmd', 3)
-('rpy', 3)                      ('tempQueryTime', 1)            ('tempResponseTime', 1)
-('trajCmd_B', 1)                ('trajCmd_N', 1)                ('trajCmd_T', 1)
-('trajTimeCur', 1)              ('trajTimeMax', 1)              ('trajUnitVectorB', 3)
-('trajUnitVectorN', 3)          ('trajUnitVectorT', 3)          ('vbx', 1)
-('vby', 1)                      ('vbz', 1)                      ('velCmdNav', 3)
-('velCtrlI_d', 1)               ('velCtrlI_u', 1)               ('velCtrlI_v', 1)
-('velNed', 3)                   ('velNedGps', 3)                ('windAngle', 1)
-('windQueryTime', 1)            ('windResponseTime', 1)         ('windSpeed', 1)
-('windStatus', 1)               ('yawSp', 1)                    ('yawSpType', 1)
+acHorWarnAC: 1		acHorWarnAngle: 1	acHorWarnRange: 1
+acVerWarnAC: 1		acVerWarnAngle: 1	acVerWarnRange: 1
+acWarnStat: 1		acXYZRel: 3		accBody: 3
+acousticTemp: 1		
+
+bladeTravelDistance: 1	
+
+cmdLatVelIgain: 1	cmdLatVelMix: 1		ctrlDeviceStatus: 1
+ctrlOp: 3		ctrlOutputType: 1	ctrlSetpointType: 1
+ctrlSp: 3		ctrlStruct: 1		ctrlUser: 1
+
+errLatLid: 1		errLatMix: 1		errLatMixCov00: 1
+errLatMixCov11: 1	errLatMixRate: 1	errLatVis: 1
+
+fcMcMode: 1		flightMode: 1		
+
+gimbalRPY: 3		gimbalRPYCmd: 3		gpHealth: 1
+gpsFix: 1		gpsFusedNSV: 1		gpsNSV: 1
+guideModeLongPidErr: 1	guideModeLongPidIgain: 1	guideModeLongPidRate: 1
+
+jobSeq: 1		jobType: 1		
+
+lidarAngle: 1		lidarDist: 1		lidarRaw: 8
+
+missionType: 1		
+
+nSat: 1			
+
+pad: 2			posCmdNed: 3		posCtrlINED: 3
+posGPS: 3		posGp: 3		posGpsFused: 3
+posNed: 3		posRTK: 3		pqr: 3
+
+rcRPYT: 4		rosTime: 1		rosTimeDiff: 1
+rpdCmd: 3		rpy: 3			rtkHealthFlag: 1
+
+stdJobLongPidErr: 1	stdJobLongPidIgain: 1	stdJobLongPidRate: 1
+
+tempQueryTime: 1	tempResponseTime: 1	trajCmdTNB: 3
+trajTimeCur: 1		trajTimeMax: 1		trajUnitVectorTNB0: 3
+trajUnitVectorTNB1: 3	trajUnitVectorTNB2: 3	
+
+vbxyz: 3		velCmdLongLatHeave: 3	velCmdNav: 3
+velCtrlIuvw: 3		velNed: 3		velNedGps: 3
+
+windAngle: 1		windQueryTime: 1	windResponseTime: 1
+windSpeed: 1		windStatus: 1		
+
+yawSp: 1		yawSpType: 1		
 
 
 [Command]
-        [help] Open Guide
-        [show] Plot preset
-                [preset_name1] [preset_name2] ...
-        [plot] Plot data from header
-                [data_name1] [data_name2] ...
-        [range] Set range [0-29999], [max] 29999
-                [start_number] [end_number]
-        [save] Save plot [default] gdLog_210323_172626_edited.png
-                [all] save all figures
-                [png_file_name_to_save] save the recent figure
-        [clear] Clear plots
 
-        [q] Close gdlog_plotter
+	[help] Open Guide
 
-        Usage: [show, plot, range, save, clear, q] sub_command_data
+	[show] Plot preset
+		[preset_name1] [preset_name2] ...
+
+	[plot] Plot data from header
+		[data_name1] [data_name2] ...
+
+	[range] Set range   [cur] 0-109667, [max] 109667
+		[start_number] [end_number]
+
+	[save] Save plot (.png)
+		[all] save all figures
+		[png_file_name_to_save] save the recent figure
+
+	[clear] Clear plots
+
+	[q] Close gdlog_plotter
+
+
+	Usage: [show, plot, range, save, clear, q] sub_command_data
+
+
+plotter> 
 ```
