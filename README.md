@@ -2,8 +2,8 @@
 ## Install dependencies
 ```sudo apt install git-lfs python3-pandas```
 
-## Run gdlog_plot.py
-```python3 gdlog_plot.py path_of_your_csv_file or path_of_your_bin_file```
+## Run gdlog_tools.py
+```python3 gdlog_tools.py path_of_your_csv_file or path_of_your_bin_file```
 
 ## parser Output
 ```
