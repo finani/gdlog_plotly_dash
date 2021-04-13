@@ -1,11 +1,57 @@
-# gdlog_plot_python
+# gdlog_tools_python
 ## Install dependencies
 ```sudo apt install python3-pandas```
 
 ## Run gdlog_plot.py
-```python3 gdlog_plot.py path_of_your_csv_file ```
+```python3 gdlog_plot.py path_of_your_csv_file or path_of_your_bin_file```
 
-## Guide
+## parser Output
+```
+/home/weebee/catkin_ws/src/gdlog_plot_python/gdLog_210323_172626.bin Parsing Start!
+
+data_number: 109667
+data_count: 0	logging_time: 0 m 0.00 s
+data_count: 3000	logging_time: 1 m 0.00 s
+data_count: 6000	logging_time: 2 m 0.00 s
+data_count: 9000	logging_time: 3 m 0.00 s
+data_count: 12000	logging_time: 4 m 0.00 s
+data_count: 15000	logging_time: 5 m 0.00 s
+data_count: 18000	logging_time: 6 m 0.00 s
+data_count: 21000	logging_time: 7 m 0.00 s
+data_count: 24000	logging_time: 8 m 0.00 s
+data_count: 27000	logging_time: 9 m 0.00 s
+data_count: 30000	logging_time: 10 m 0.00 s
+data_count: 33000	logging_time: 11 m 0.00 s
+data_count: 36000	logging_time: 12 m 0.00 s
+data_count: 39000	logging_time: 13 m 0.00 s
+data_count: 42000	logging_time: 14 m 0.00 s
+data_count: 45000	logging_time: 15 m 0.00 s
+data_count: 48000	logging_time: 16 m 0.00 s
+data_count: 51000	logging_time: 17 m 0.00 s
+data_count: 54000	logging_time: 18 m 0.00 s
+data_count: 57000	logging_time: 19 m 0.00 s
+data_count: 60000	logging_time: 20 m 0.00 s
+data_count: 63000	logging_time: 21 m 0.00 s
+data_count: 66000	logging_time: 22 m 0.00 s
+data_count: 69000	logging_time: 23 m 0.00 s
+data_count: 72000	logging_time: 24 m 0.00 s
+data_count: 75000	logging_time: 25 m 0.00 s
+data_count: 78000	logging_time: 26 m 0.00 s
+data_count: 81000	logging_time: 27 m 0.00 s
+data_count: 84000	logging_time: 28 m 0.00 s
+data_count: 87000	logging_time: 29 m 0.00 s
+data_count: 90000	logging_time: 30 m 0.00 s
+data_count: 93000	logging_time: 31 m 0.00 s
+data_count: 96000	logging_time: 32 m 0.00 s
+data_count: 99000	logging_time: 33 m 0.00 s
+data_count: 102000	logging_time: 34 m 0.00 s
+data_count: 105000	logging_time: 35 m 0.00 s
+data_count: 108000	logging_time: 36 m 0.00 s
+total_data_count: 109667	total_logging_time: 36 m 33.34 s
+Saved: /home/weebee/catkin_ws/src/gdlog_plot_python/gdLog_210323_172626.csv
+```
+
+## plotter Guide
 
 ```
 Welcome to gdlog_plotter
