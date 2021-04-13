@@ -1,6 +1,6 @@
 # gdlog_tools_python
 ## Install dependencies
-```sudo apt install python3-pandas```
+```sudo apt install git-lfs python3-pandas```
 
 ## Run gdlog_plot.py
 ```python3 gdlog_plot.py path_of_your_csv_file or path_of_your_bin_file```
