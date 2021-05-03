@@ -111,7 +111,7 @@ app.layout = html.Div([
     ],
         style={
             'display': 'inline'
-        }
+    }
     ),
     html.Hr(),  # horizontal line
     html.Label([
@@ -126,9 +126,9 @@ app.layout = html.Div([
     dcc.Store(id='clientside_figure_store_px'),
     html.Hr(),
     html.Details([
-            html.Summary('Input File Details'),
-            html.Div(id='output_data_upload')
-        ],
+        html.Summary('Input File Details'),
+        html.Div(id='output_data_upload')
+    ],
         open=True),
 ])
 
