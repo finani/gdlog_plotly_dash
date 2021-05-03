@@ -119,8 +119,7 @@ def parse_contents(contents, filename, date):
             df = pd.read_csv(
                 io.StringIO(decoded.decode('utf-8')), low_memory=False)
         elif 'bin' in filename:
-            chunk = content_string.encode()
-            chunk = chunk[0:len(chunk)//616*616]
+            chunk = decoded[0:len(decoded)//616*616]
             data_count = 0
             with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
                 wr = csv.writer(f_csv)
