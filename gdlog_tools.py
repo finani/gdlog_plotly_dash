@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import gdlog_plot
+import gdlog_plot_matplotlib
 import gdlog_parser
 
 if __name__ == '__main__':
@@ -20,7 +20,7 @@ if __name__ == '__main__':
         gdlog_parser = gdlog_parser.GDLOG_PARSER(csv_path)
         gdlog_parser.run()
     elif file_extension == 'csv':
-        gdlog_plotter = gdlog_plot.GDLOG_PLOTTER(csv_path)
+        gdlog_plotter = gdlog_plot_matplotlib.GDLOG_PLOTTER(csv_path)
         gdlog_plotter.show_guide()
         while(True):
             gdlog_plotter.run()
