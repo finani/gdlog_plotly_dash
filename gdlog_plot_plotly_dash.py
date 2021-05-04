@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import os
 import sys
@@ -140,7 +140,7 @@ app.layout = html.Div([
                         {'x': [1, 2, 3], 'y': [2, 4, 3],
                             'type': 'bar', 'name': 'SF'},
                         {'x': [1, 2, 3], 'y': [5, 4, 3],
-                         'type': 'bar', 'name': u'Montréal'}
+                         'type': 'bar', 'name': 'Montreal'}
                     ]
                 }
             )
@@ -185,7 +185,7 @@ def parse_contents(contents, filename, date):
         elif 'xls' in filename:
             df = pd.read_excel(io.BytesIO(decoded))
             parsing_log = 'read xls file done'
-        # Ignore data before 2020년 January 1일 Wednesday AM 1:00:00
+        # Ignore data before 2020 January 1st Wednesday AM 1:00:00
         df = df[df['rosTime'] > 1577840400]
         df.columns = df.columns.str.strip()
         df['dateTime'] = pd.to_datetime(
