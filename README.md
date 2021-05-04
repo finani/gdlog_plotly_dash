@@ -2,11 +2,11 @@
 
 1. Install dependancies
 
-```pip install pandas dash```
+```pip3 install pandas dash```
 
 2. Run server
 
-```python gdlog_plot_plotly_dash.py```
+```python3 gdlog_plot_plotly_dash.py```
 
 3. Open the web browser
 
