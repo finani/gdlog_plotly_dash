@@ -74,7 +74,6 @@ class GDLOG_PLOTTER:
                     plot_header.append(title_+'_'+self.df_header_dict[title_][1+i]+'_'+str(i))
         else:
             print("Error: data_num_ is invaild")
-        # df_picked = self.df.loc[self.data_range, plot_header]
 
         plot_header_x = plot_header[0]
         for plot_header_y in plot_header[1:]:
@@ -249,11 +248,11 @@ class GDLOG_PLOTTER:
 
         elif input_list[0] == 'plot':
             if data_length > 0:
-                # try:
-                self.plot_using_data_name_list(input_list[1:])
-                # except:
-                #     self.show_log_data()
-                #     print("invalid data_name\n")
+                try:
+                    self.plot_using_data_name_list(input_list[1:])
+                except:
+                    self.show_log_data()
+                    print("invalid data_name\n")
             else:
                 self.show_log_data()
                 print("\tUsage: plot [data_name1] [data_name2] ...")

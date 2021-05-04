@@ -114,19 +114,50 @@ app.layout = html.Div([
     }
     ),
     html.Hr(),  # horizontal line
-    html.Label([
-        dcc.Dropdown(
-            id='io_data_dropdown',
-            multi=True,
-            placeholder="Select Data",
-        ),
+
+    dcc.Tabs([
+        dcc.Tab(label='Tab one', children=[
+            html.Label([
+                dcc.Dropdown(
+                    id='io_data_dropdown',
+                    multi=True,
+                    placeholder="Select Data",
+                ),
+            ]),
+            dcc.Graph(id='clientside_graph_go'),
+        ]),
+        dcc.Tab(label='Tab two', children=[
+            dcc.Graph(id='graph_go_3d_pos'),
+        ]),
+        dcc.Tab(label='Tab three', children=[
+            dcc.Graph(
+                figure={
+                    'data': [
+                        {'x': [1, 2, 3], 'y': [2, 4, 3],
+                            'type': 'bar', 'name': 'SF'},
+                        {'x': [1, 2, 3], 'y': [5, 4, 3],
+                         'type': 'bar', 'name': u'Montréal'},
+                    ]
+                }
+            )
+        ]),
     ]),
+
+    dcc.RangeSlider(
+        id='range-slider',
+        min=0, max=2.5, step=0.1,
+        marks={0: '0', 2.5: '2.5'},
+        value=[0.5, 2]
+    ),
+
     dcc.Store(id='df_header_list_sorted'),
-    dcc.Graph(id='clientside_graph_px'),
-    dcc.Store(id='clientside_figure_store_px'),
+    # dcc.Graph(id='clientside_graph_px'),
+    dcc.Store(id='clientside_figure_store_go'),
+    dcc.Store(id='clientside_figure_store_go_3d_pos'),
     html.Hr(),
     html.Details([
         html.Summary('Input File Details'),
+        html.Div(id='output_parsing_log'),
         html.Div(id='output_data_upload')
     ],
         open=True),
@@ -141,6 +172,7 @@ def parse_contents(contents, filename, date):
         if 'csv' in filename:
             df = pd.read_csv(
                 io.StringIO(decoded.decode('utf-8')), low_memory=False)
+            parsing_log = 'read csv file done'
         elif 'bin' in filename:
             chunk = decoded[0:len(decoded)//616*616]
             data_count = 0
@@ -154,8 +186,10 @@ def parse_contents(contents, filename, date):
                     data_count += 1
                 print("Saved: " + f_csv.name)
             df = pd.read_csv(filename.split('.')[0] + '.csv')
+            parsing_log = 'read/parsing bin file done'
         elif 'xls' in filename:
             df = pd.read_excel(io.BytesIO(decoded))
+            parsing_log = 'read xls file done'
         # Ignore data before 2020년 January 1일 Wednesday AM 1:00:00
         df = df[df['rosTime'] > 1577840400]
         df.columns = df.columns.str.strip()
@@ -177,26 +211,28 @@ def parse_contents(contents, filename, date):
             'whiteSpace': 'pre-wrap',
             'wordBreak': 'break-all'
         })
-    ]), df_header_list_sorted
+    ]), df_header_list_sorted, parsing_log
 
 
 @app.callback(Output('output_data_upload', 'children'),
               Output('df_header_list_sorted', 'data'),
               Output('io_data_dropdown', 'options'),
+              Output('output_parsing_log', 'children'),
               Input('input_upload_data', 'contents'),
               State('input_upload_data', 'filename'),
               State('input_upload_data', 'last_modified'))
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
     if list_of_contents is not None:
-        children, df_header_list_sorted = parse_contents(
+        children, df_header_list_sorted, parsing_log = parse_contents(
             list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
-        return children, df_header_list_sorted, options
+        parsing_children = html.Div(parsing_log)
+        return children, df_header_list_sorted, options, parsing_children
 
 
 @app.callback(
-    Output('clientside_figure_store_px', 'data'),
+    Output('clientside_figure_store_go', 'data'),
     Input('io_data_dropdown', 'value')
 )
 def update_store_data(df_header):
@@ -234,9 +270,36 @@ app.clientside_callback(
         return fig;
     }
     """,
-    Output('clientside_graph_px', 'figure'),
-    Input('clientside_figure_store_px', 'data')
+    Output('clientside_graph_go', 'figure'),
+    Input('clientside_figure_store_go', 'data')
 )
+
+
+@app.callback(
+    Output("graph_go_3d_pos", "figure"),
+    [Input("range-slider", "value")])
+def update_bar_chart(slider_range):
+    # low, high = slider_range
+    # mask = (df.petal_width > low) & (df.petal_width < high)
+    global df
+    try:
+        figure_3d = go.Figure()
+        # deleteTraces, FigureWidget
+        figure_3d.add_trace(go.Scatter3d(
+            x=df['posNed_0'], y=df['posNed_1'], z=df['posNed_0'], name='posNed',
+            mode='markers',
+            marker=dict(
+                size=12,
+                color=df['rosTime'],                # set color to an array/list of desired values
+                colorscale='Viridis',   # choose a colorscale
+                opacity=0.8
+            )))
+    except Exception as e:
+        print(e)
+        return html.Div([
+            'There was an error plotting data.'
+        ])
+    return figure_3d
 
 
 if __name__ == '__main__':
