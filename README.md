@@ -3,6 +3,7 @@
 1. Install dependancies
 
 ```sudo apt install python3-pip python3-pandas```
+
 ```pip3 install dash```
 
 2. Run server
