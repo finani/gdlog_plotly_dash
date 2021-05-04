@@ -117,9 +117,9 @@ app.layout = html.Div([
             'display': 'inline'
     }
     ),
-    html.Hr(),  # horizontal line
+    html.Hr(),
     dcc.Tabs([
-        dcc.Tab(label='Data Plot', children=[
+        dcc.Tab(label='2D Data Plot', children=[
             html.Label([
                 dcc.Dropdown(
                     id='io_data_dropdown',
@@ -201,7 +201,6 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 df['dateTime'] = pd.to_datetime(
                     df['rosTime'], unit='s') + pd.DateOffset(hours=9)
                 df['diffTime'] = df['rosTime'].diff()
-                # df_header_list = df.columns.tolist()
                 df_header_list_sorted = sorted(df.columns.tolist())
             elif 'pointCloud' in filename:
                 if 'csv' in filename:
@@ -212,7 +211,8 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df_pc = pd.DataFrame(np_pc, columns=['x', 'y', 'z'])
                     parsing_log = parsing_log + 'pointCloud csv file!\n'
             strNames = strNames + filename + '\n'
-            strDates = strDates + str(datetime.datetime.fromtimestamp(date)) + '\n'
+            strDates = strDates + \
+                str(datetime.datetime.fromtimestamp(date)) + '\n'
             strDecoded = strDecoded + str(decoded[0:200]) + '...\n'
         except Exception as e:
             print(e)
@@ -226,14 +226,9 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
         html.P(strNames, style={'white-space': 'pre-line'}),
         html.P('[Last Modified]'),
         html.P(strDates, style={'white-space': 'pre-line'}),
-        html.Hr(),  # horizontal line
+        html.Hr(),
         html.P('[Raw Contents]'),
         html.P(strDecoded, style={'white-space': 'pre-line'})
-        # html.Div('Raw Content'),
-        # html.Pre(str(decoded[0:200]) + '...', style={
-        #     'whiteSpace': 'pre-wrap',
-        #     'wordBreak': 'break-all'
-        # })
     ]), df_header_list_sorted
 
 
@@ -272,7 +267,16 @@ def update_store_data(df_header):
                 figure.add_trace(go.Scatter(
                     x=df[x_title], y=df[y_title], name=y_title,
                     mode='lines',
-                    line=dict(width=3)))  # color=df['jobSeq'],
+                    line=dict(width=3)))
+                figure.update_layout(
+                    xaxis_title=x_title,
+                    xaxis=dict(
+                        rangeslider=dict(
+                            visible=True,
+                            thickness=0.1
+                        )
+                    )
+                )
     return figure
 
 
