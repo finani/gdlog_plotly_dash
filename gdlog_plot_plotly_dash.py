@@ -85,10 +85,9 @@ app.layout = html.Div([
             id='input_upload_data',
             children=html.Div([
                 'Drag and Drop or ',
-                html.A('Select Files'),
-            ]),
+                html.A('Select Files')]),
             style={
-                'width': '68%',
+                'width': '60%',
                 'height': '60px',
                 'lineHeight': '60px',
                 'borderWidth': '1px',
@@ -96,17 +95,16 @@ app.layout = html.Div([
                 'borderRadius': '5px',
                 'textAlign': 'center',
                 'margin': '10px',
-                'float': 'left',
-            },
+                'float': 'left'},
             multiple=False
         ),
         html.Div([
-            html.A(html.Img(height='100%', src='https://s3.us-west-2.amazonaws.com/secure.notion-static.com/31b49635-00f1-43f3-b0fb-6063080f3b9e/nearthlab-logo-black-large.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45O3KS52Y5%2F20210503%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20210503T021850Z&X-Amz-Expires=86400&X-Amz-Signature=689d1b968b057dc2c71d7d13af424d7cbb1532d69fa24d95c1aa44abd69c41ec&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22nearthlab-logo-black-large.png%22'), href='https://www.nearthlab.com/'),
+            html.A(html.Img(height='100%', src='https://s3.us-west-2.amazonaws.com/secure.notion-static.com/31b49635-00f1-43f3-b0fb-6063080f3b9e/nearthlab-logo-black-large.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45O3KS52Y5%2F20210503%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20210503T021850Z&X-Amz-Expires=86400&X-Amz-Signature=689d1b968b057dc2c71d7d13af424d7cbb1532d69fa24d95c1aa44abd69c41ec&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22nearthlab-logo-black-large.png%22'), href='https://www.nearthlab.com/')
         ],
             style={
-            'height': '40px',
-            'textAlign': 'center',
-            'padding-top': '20px',
+                'height': '40px',
+                'textAlign': 'center',
+                'padding-top': '20px'
         }),
     ],
         style={
@@ -114,53 +112,50 @@ app.layout = html.Div([
     }
     ),
     html.Hr(),  # horizontal line
-
     dcc.Tabs([
-        dcc.Tab(label='Tab one', children=[
+        dcc.Tab(label='Data Plot', children=[
             html.Label([
                 dcc.Dropdown(
                     id='io_data_dropdown',
                     multi=True,
-                    placeholder="Select Data",
-                ),
+                    placeholder="Select Data"
+                )
             ]),
-            dcc.Graph(id='clientside_graph_go'),
+            dcc.Graph(id='clientside_graph_go')
         ]),
-        dcc.Tab(label='Tab two', children=[
-            dcc.Graph(id='graph_go_3d_pos'),
+        dcc.Tab(label='3D Data Plot', children=[
+            dcc.Checklist(
+                id='output_select_data_checklist',
+                options=[
+                    {'label': 'Flight Path', 'value': 'Flight_Path'},
+                    {'label': 'Lidar Data', 'value': 'Lidar_Data'}],
+                labelStyle={'display': 'inline-block'}
+            ),
+            dcc.Graph(id='graph_go_3d_pos')
         ]),
-        dcc.Tab(label='Tab three', children=[
+        dcc.Tab(label='Reserved', children=[
             dcc.Graph(
                 figure={
                     'data': [
                         {'x': [1, 2, 3], 'y': [2, 4, 3],
                             'type': 'bar', 'name': 'SF'},
                         {'x': [1, 2, 3], 'y': [5, 4, 3],
-                         'type': 'bar', 'name': u'Montréal'},
+                         'type': 'bar', 'name': u'Montréal'}
                     ]
                 }
             )
-        ]),
+        ])
     ]),
-
-    dcc.RangeSlider(
-        id='range-slider',
-        min=0, max=2.5, step=0.1,
-        marks={0: '0', 2.5: '2.5'},
-        value=[0.5, 2]
-    ),
-
     dcc.Store(id='df_header_list_sorted'),
-    # dcc.Graph(id='clientside_graph_px'),
     dcc.Store(id='clientside_figure_store_go'),
-    dcc.Store(id='clientside_figure_store_go_3d_pos'),
     html.Hr(),
     html.Details([
         html.Summary('Input File Details'),
         html.Div(id='output_parsing_log'),
         html.Div(id='output_data_upload')
     ],
-        open=True),
+        open=True
+    )
 ])
 
 
@@ -222,6 +217,7 @@ def parse_contents(contents, filename, date):
               State('input_upload_data', 'filename'),
               State('input_upload_data', 'last_modified'))
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
+    global df
     if list_of_contents is not None:
         children, df_header_list_sorted, parsing_log = parse_contents(
             list_of_contents, list_of_names, list_of_dates)
@@ -239,6 +235,8 @@ def update_store_data(df_header):
     global df
     try:
         figure = go.Figure()
+        figure.update_layout(height=550,
+                             margin=dict(r=20, b=10, l=10, t=10))
         if len(df_header) > 0:
             x_title = 'dateTime'
             for y_title in df_header:
@@ -277,28 +275,29 @@ app.clientside_callback(
 
 @app.callback(
     Output("graph_go_3d_pos", "figure"),
-    [Input("range-slider", "value")])
-def update_bar_chart(slider_range):
-    # low, high = slider_range
-    # mask = (df.petal_width > low) & (df.petal_width < high)
+    [Input("output_select_data_checklist", "value")])
+def display_animated_graph(value):
     global df
-    try:
-        figure_3d = go.Figure()
-        # deleteTraces, FigureWidget
-        figure_3d.add_trace(go.Scatter3d(
-            x=df['posNed_0'], y=df['posNed_1'], z=df['posNed_0'], name='posNed',
-            mode='markers',
-            marker=dict(
-                size=12,
-                color=df['rosTime'],                # set color to an array/list of desired values
-                colorscale='Viridis',   # choose a colorscale
-                opacity=0.8
-            )))
-    except Exception as e:
-        print(e)
-        return html.Div([
-            'There was an error plotting data.'
-        ])
+    figure_3d = go.Figure()
+    figure_3d.update_layout(scene=dict(
+        xaxis_title='y_East',
+        yaxis_title='x_North',
+        zaxis_title='-z_Up'),
+        height=550,
+        margin=dict(r=20, b=10, l=10, t=10))
+    if 'Flight_Path' in value:
+        if 'posNed_0' in df.columns:
+            figure_3d.add_trace(go.Scatter3d(
+                x=df['posNed_1'], y=df['posNed_0'], z=-df['posNed_2'],
+                mode='lines',
+                line=dict(color=-df['rosTime'], colorscale='Viridis', width=6)))
+        elif 'posNed_m_0' in df.columns:
+            figure_3d.add_trace(go.Scatter3d(
+                x=df['posNed_m_1'], y=df['posNed_m_0'], z=-df['posNed_m_2'],
+                mode='lines',
+                line=dict(color=-df['rosTime'], colorscale='Viridis', width=6)))
+    if 'Lidar_Data' in value:
+        print('Lidar_Data')
     return figure_3d
 
 

@@ -10,7 +10,7 @@ import os
 currDir = os.getcwd()
 dataDir = currDir
 def plotCSV():
-    pointcloudFromOctomapFileName = "pointCloudFromOctomap.csv"
+    pointcloudFromOctomapFileName = "point_cloud_jongsik_moon/pointCloudFromOctomap.csv"
     pointcloudOctomapDir = os.path.join(dataDir, pointcloudFromOctomapFileName)
     pointcloudOctomapf = open(pointcloudOctomapDir, 'r')
     rdr = csv.reader(pointcloudOctomapf)
