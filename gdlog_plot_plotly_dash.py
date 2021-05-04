@@ -9,6 +9,8 @@ import io
 import struct
 import csv
 
+import numpy as np
+
 import dash
 from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
@@ -30,6 +32,8 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets,
                 prevent_initial_callbacks=True)
 
 df = pd.DataFrame()
+df_pc = pd.DataFrame()
+df_header_list_sorted = []
 
 bin_data_type = 'dBBBBBBffffffffffffBBBBBdddffffffffHBHBddddddddddddfffffffffffBBBffffffffffffffffffffffffffffffffBfBddfddfffffffffffffffffffffffffffffffffBBfffHH'
 
@@ -96,10 +100,12 @@ app.layout = html.Div([
                 'textAlign': 'center',
                 'margin': '10px',
                 'float': 'left'},
-            multiple=False
+            multiple=True
         ),
         html.Div([
-            html.A(html.Img(height='100%', src='https://s3.us-west-2.amazonaws.com/secure.notion-static.com/31b49635-00f1-43f3-b0fb-6063080f3b9e/nearthlab-logo-black-large.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45O3KS52Y5%2F20210503%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20210503T021850Z&X-Amz-Expires=86400&X-Amz-Signature=689d1b968b057dc2c71d7d13af424d7cbb1532d69fa24d95c1aa44abd69c41ec&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22nearthlab-logo-black-large.png%22'), href='https://www.nearthlab.com/')
+            html.A(html.Img(src='https://s3.us-west-2.amazonaws.com/secure.notion-static.com/31b49635-00f1-43f3-b0fb-6063080f3b9e/nearthlab-logo-black-large.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45O3KS52Y5%2F20210503%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20210503T021850Z&X-Amz-Expires=86400&X-Amz-Signature=689d1b968b057dc2c71d7d13af424d7cbb1532d69fa24d95c1aa44abd69c41ec&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22nearthlab-logo-black-large.png%22',
+                            style={'height': '100%'}),
+                   href='https://www.nearthlab.com/')
         ],
             style={
                 'height': '40px',
@@ -121,14 +127,14 @@ app.layout = html.Div([
                     placeholder="Select Data"
                 )
             ]),
-            dcc.Graph(id='clientside_graph_go')
+            dcc.Graph(id='graph_go')
         ]),
         dcc.Tab(label='3D Data Plot', children=[
             dcc.Checklist(
                 id='output_select_data_checklist',
                 options=[
                     {'label': 'Flight Path', 'value': 'Flight_Path'},
-                    {'label': 'Lidar Data', 'value': 'Lidar_Data'}],
+                    {'label': 'Lidar Point Cloud', 'value': 'Lidar_PC'}],
                 labelStyle={'display': 'inline-block'}
             ),
             dcc.Graph(id='graph_go_3d_pos')
@@ -147,11 +153,9 @@ app.layout = html.Div([
         ])
     ]),
     dcc.Store(id='df_header_list_sorted'),
-    dcc.Store(id='clientside_figure_store_go'),
     html.Hr(),
     html.Details([
         html.Summary('Input File Details'),
-        html.Div(id='output_parsing_log'),
         html.Div(id='output_data_upload')
     ],
         open=True
@@ -159,118 +163,117 @@ app.layout = html.Div([
 ])
 
 
-def parse_contents(contents, filename, date):
-    global df
-    content_type, content_string = contents.split(',')
-    decoded = base64.b64decode(content_string)
-    try:
-        if 'csv' in filename:
-            df = pd.read_csv(
-                io.StringIO(decoded.decode('utf-8')), low_memory=False)
-            parsing_log = 'read csv file done'
-        elif 'bin' in filename:
-            chunk = decoded[0:len(decoded)//616*616]
-            data_count = 0
-            with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
-                wr = csv.writer(f_csv)
-                wr.writerow(csv_header_list)
-                for unpacked_chunk in struct.iter_unpack(bin_data_type, chunk):
-                    wr.writerow(list(unpacked_chunk))
-                    if data_count % 3000 == 0:
-                        print("data_count: " + str(data_count))
-                    data_count += 1
-                print("Saved: " + f_csv.name)
-            df = pd.read_csv(filename.split('.')[0] + '.csv')
-            parsing_log = 'read/parsing bin file done'
-        elif 'xls' in filename:
-            df = pd.read_excel(io.BytesIO(decoded))
-            parsing_log = 'read xls file done'
-        # Ignore data before 2020 January 1st Wednesday AM 1:00:00
-        df = df[df['rosTime'] > 1577840400]
-        df.columns = df.columns.str.strip()
-        df['dateTime'] = pd.to_datetime(
-            df['rosTime'], unit='s') + pd.DateOffset(hours=9)
-        # df_header_list = df.columns.tolist()
-        df_header_list_sorted = sorted(df.columns.tolist())
-    except Exception as e:
-        print(e)
-        return html.Div([
-            'There was an error processing this file.'
-        ])
+def parse_contents(list_of_contents, list_of_names, list_of_dates):
+    global df, df_pc, df_header_list_sorted
+    parsing_log = ''
+    strNames = ''
+    strDates = ''
+    strDecoded = ''
+    for contents, filename, date in zip(list_of_contents, list_of_names, list_of_dates):
+        try:
+            content_type, content_string = contents.split(',')
+            decoded = base64.b64decode(content_string)
+            if 'gdLog' in filename:
+                if 'csv' in filename:
+                    df = pd.read_csv(
+                        io.StringIO(decoded.decode('utf-8')), low_memory=False)
+                    parsing_log = parsing_log + 'gdLog csv file!\n'
+                elif 'bin' in filename:
+                    chunk = decoded[0:len(decoded)//616*616]
+                    data_count = 0
+                    with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
+                        wr = csv.writer(f_csv)
+                        wr.writerow(csv_header_list)
+                        for unpacked_chunk in struct.iter_unpack(bin_data_type, chunk):
+                            wr.writerow(list(unpacked_chunk))
+                            if data_count % 3000 == 0:
+                                print("data_count: " + str(data_count))
+                            data_count += 1
+                        print("Saved: " + f_csv.name)
+                    df = pd.read_csv(filename.split('.')[0] + '.csv')
+                    parsing_log = parsing_log + 'gdLog bin file!\n'
+                elif 'xls' in filename:
+                    df = pd.read_excel(io.BytesIO(decoded))
+                    parsing_log = parsing_log + 'gdLog xls file!\n'
+                # Ignore data before 2020 January 1st Wednesday AM 1:00:00
+                df = df[df['rosTime'] > 1577840400]
+                df.columns = df.columns.str.strip()
+                df['dateTime'] = pd.to_datetime(
+                    df['rosTime'], unit='s') + pd.DateOffset(hours=9)
+                df['diffTime'] = df['rosTime'].diff()
+                # df_header_list = df.columns.tolist()
+                df_header_list_sorted = sorted(df.columns.tolist())
+            elif 'pointCloud' in filename:
+                if 'csv' in filename:
+                    np_pc = np.loadtxt(
+                        io.StringIO(decoded.decode('utf-8')), delimiter=',')
+                    np_pc = np_pc.astype(np.float)
+                    np_pc = np_pc.reshape(-1, 3)
+                    df_pc = pd.DataFrame(np_pc, columns=['x', 'y', 'z'])
+                    parsing_log = parsing_log + 'pointCloud csv file!\n'
+            strNames = strNames + filename + '\n'
+            strDates = strDates + str(datetime.datetime.fromtimestamp(date)) + '\n'
+            strDecoded = strDecoded + str(decoded[0:200]) + '...\n'
+        except Exception as e:
+            print(e)
+            return html.Div([
+                'There was an error processing this file.'
+            ])
     return html.Div([
-        html.P('[File Name] ' + filename),
-        html.P('[Last Modified] ' + str(datetime.datetime.fromtimestamp(date))),
+        html.P('[Parsing Log]'),
+        html.P(parsing_log, style={'white-space': 'pre-line'}),
+        html.P('[File Names]'),
+        html.P(strNames, style={'white-space': 'pre-line'}),
+        html.P('[Last Modified]'),
+        html.P(strDates, style={'white-space': 'pre-line'}),
         html.Hr(),  # horizontal line
-        html.Div('Raw Content'),
-        html.Pre(str(decoded[0:200]) + '...', style={
-            'whiteSpace': 'pre-wrap',
-            'wordBreak': 'break-all'
-        })
-    ]), df_header_list_sorted, parsing_log
+        html.P('[Raw Contents]'),
+        html.P(strDecoded, style={'white-space': 'pre-line'})
+        # html.Div('Raw Content'),
+        # html.Pre(str(decoded[0:200]) + '...', style={
+        #     'whiteSpace': 'pre-wrap',
+        #     'wordBreak': 'break-all'
+        # })
+    ]), df_header_list_sorted
 
 
 @app.callback(Output('output_data_upload', 'children'),
               Output('df_header_list_sorted', 'data'),
               Output('io_data_dropdown', 'options'),
-              Output('output_parsing_log', 'children'),
               Input('input_upload_data', 'contents'),
               State('input_upload_data', 'filename'),
               State('input_upload_data', 'last_modified'))
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
     global df
     if list_of_contents is not None:
-        children, df_header_list_sorted, parsing_log = parse_contents(
+        children, df_header_list_sorted = parse_contents(
             list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
-        parsing_children = html.Div(parsing_log)
-        return children, df_header_list_sorted, options, parsing_children
+        return children, df_header_list_sorted, options
 
 
 @app.callback(
-    Output('clientside_figure_store_go', 'data'),
+    Output('graph_go', 'figure'),
     Input('io_data_dropdown', 'value')
 )
 def update_store_data(df_header):
     global df
-    try:
-        figure = go.Figure()
-        figure.update_layout(height=550,
-                             margin=dict(r=20, b=10, l=10, t=10))
-        if len(df_header) > 0:
+    figure = go.Figure()
+    figure.update_layout(height=550,
+                         margin=dict(r=20, b=10, l=10, t=10))
+    if len(df_header) > 0:
+        if 'diffTime' in df_header:
+            figure.add_trace(go.Histogram(x=df['diffTime']))
+        else:
             x_title = 'dateTime'
             for y_title in df_header:
                 # deleteTraces, FigureWidget
                 figure.add_trace(go.Scatter(
-                    x=df[x_title], y=df[y_title], name=y_title))
-    except Exception as e:
-        print(e)
-        return html.Div([
-            'There was an error plotting data.'
-        ])
+                    x=df[x_title], y=df[y_title], name=y_title,
+                    mode='lines',
+                    line=dict(width=3)))  # color=df['jobSeq'],
     return figure
-
-
-app.clientside_callback(
-    """
-    function(figure) {
-        if(figure === undefined) {
-            return {'data': [], 'layout': {}};
-        }
-        const fig = Object.assign({}, figure, {
-            'layout': {
-                ...figure.layout,
-                'yaxis': {
-                    ...figure.layout.yaxis
-                }
-             }
-        });
-        return fig;
-    }
-    """,
-    Output('clientside_graph_go', 'figure'),
-    Input('clientside_figure_store_go', 'data')
-)
 
 
 @app.callback(
@@ -288,16 +291,19 @@ def display_animated_graph(value):
     if 'Flight_Path' in value:
         if 'posNed_0' in df.columns:
             figure_3d.add_trace(go.Scatter3d(
-                x=df['posNed_1'], y=df['posNed_0'], z=-df['posNed_2'],
+                x=df['posNed_1'], y=df['posNed_0'], z=-df['posNed_2'], name='Flight Path',
                 mode='lines',
                 line=dict(color=-df['rosTime'], colorscale='Viridis', width=6)))
         elif 'posNed_m_0' in df.columns:
             figure_3d.add_trace(go.Scatter3d(
-                x=df['posNed_m_1'], y=df['posNed_m_0'], z=-df['posNed_m_2'],
+                x=df['posNed_m_1'], y=df['posNed_m_0'], z=-df['posNed_m_2'], name='Flight Path',
                 mode='lines',
                 line=dict(color=-df['rosTime'], colorscale='Viridis', width=6)))
-    if 'Lidar_Data' in value:
-        print('Lidar_Data')
+    if 'Lidar_PC' in value:
+        figure_3d.add_trace(go.Scatter3d(
+            x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'], name='Lidar Point Cloud',
+            mode='markers',
+            marker=dict(size=3)))
     return figure_3d
 
 
