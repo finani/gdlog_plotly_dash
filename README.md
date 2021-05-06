@@ -1,4 +1,4 @@
-# gdlog_tools_python
+# gdlog_plotly_dash
 
 1. Install dependancies
 
