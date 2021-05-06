@@ -34,6 +34,9 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets,
 df = pd.DataFrame()
 df_pc = pd.DataFrame()
 df_header_list_sorted = []
+fcMcMode_index = []
+fcMcMode_value = []
+fcMcMode_color = []
 
 bin_data_type = 'dBBBBBBffffffffffffBBBBBdddffffffffHBHBddddddddddddfffffffffffBBBffffffffffffffffffffffffffffffffBfBddfddfffffffffffffffffffffffffffffffffBBfffHH'
 
@@ -103,7 +106,7 @@ app.layout = html.Div([
             multiple=True
         ),
         html.Div([
-            html.A(html.Img(src='https://s3.us-west-2.amazonaws.com/secure.notion-static.com/31b49635-00f1-43f3-b0fb-6063080f3b9e/nearthlab-logo-black-large.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAT73L2G45O3KS52Y5%2F20210503%2Fus-west-2%2Fs3%2Faws4_request&X-Amz-Date=20210503T021850Z&X-Amz-Expires=86400&X-Amz-Signature=689d1b968b057dc2c71d7d13af424d7cbb1532d69fa24d95c1aa44abd69c41ec&X-Amz-SignedHeaders=host&response-content-disposition=filename%20%3D%22nearthlab-logo-black-large.png%22',
+            html.A(html.Img(src=app.get_asset_url('nearthlab-logo-black-large.png'),
                             style={'height': '100%'}),
                    href='https://www.nearthlab.com/')
         ],
@@ -164,7 +167,7 @@ app.layout = html.Div([
 
 
 def parse_contents(list_of_contents, list_of_names, list_of_dates):
-    global df, df_pc, df_header_list_sorted
+    global df, df_pc, fcMcMode_index, fcMcMode_value, fcMcMode_color, df_header_list_sorted
     parsing_log = ''
     strNames = ''
     strDates = ''
@@ -195,12 +198,30 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 elif 'xls' in filename:
                     df = pd.read_excel(io.BytesIO(decoded))
                     parsing_log = parsing_log + 'gdLog xls file!\n'
+                # dataFrame Post-Processing
                 # Ignore data before 2020 January 1st Wednesday AM 1:00:00
                 df = df[df['rosTime'] > 1577840400]
                 df.columns = df.columns.str.strip()
                 df['dateTime'] = pd.to_datetime(
                     df['rosTime'], unit='s') + pd.DateOffset(hours=9)
                 df['diffTime'] = df['rosTime'].diff()
+                
+                df.loc[df.fcMcMode == 0, 'strFcMcMode'] = 'RC'
+                df.loc[df.fcMcMode == 1, 'strFcMcMode'] = 'Guide'
+                df.loc[df.fcMcMode == 2, 'strFcMcMode'] = 'Auto'
+                df.loc[df.fcMcMode == 3, 'strFcMcMode'] = 'Boot'
+                df.loc[df.fcMcMode == 0, 'colorFcMcMode'] = 'yellow'
+                df.loc[df.fcMcMode == 1, 'colorFcMcMode'] = 'Blue'
+                df.loc[df.fcMcMode == 2, 'colorFcMcMode'] = 'turquoise'
+                df.loc[df.fcMcMode == 3, 'colorFcMcMode'] = 'LightPink'
+                df['diffFcMcMode'] = df['fcMcMode'].diff()
+
+                fcMcMode_index = df.index[df['diffFcMcMode'] != 0].tolist()
+                fcMcMode_index = fcMcMode_index - fcMcMode_index[0]
+                fcMcMode_index = np.append(fcMcMode_index, len(df)-1)
+                fcMcMode_value = df.iloc[fcMcMode_index].strFcMcMode.tolist()
+                fcMcMode_color = df.iloc[fcMcMode_index].colorFcMcMode.tolist()
+                
                 df_header_list_sorted = sorted(df.columns.tolist())
             elif 'pointCloud' in filename:
                 if 'csv' in filename:
@@ -253,7 +274,7 @@ def update_data_upload(list_of_contents, list_of_names, list_of_dates):
     Input('io_data_dropdown', 'value')
 )
 def update_store_data(df_header):
-    global df
+    global df, fcMcMode_index, fcMcMode_value, fcMcMode_color
     figure = go.Figure()
     figure.update_layout(height=550,
                          margin=dict(r=20, b=10, l=10, t=10))
@@ -261,6 +282,11 @@ def update_store_data(df_header):
         if 'diffTime' in df_header:
             figure.add_trace(go.Histogram(x=df['diffTime']))
         else:
+            for idx in range(len(fcMcMode_index)-1):
+                figure.add_vrect(
+                    x0=df.iloc[fcMcMode_index[idx]].dateTime, x1=df.iloc[fcMcMode_index[idx+1]].dateTime, line_width=0,
+                    annotation_text=fcMcMode_value[idx], annotation_position="top left",
+                    fillcolor=fcMcMode_color[idx], opacity=0.2)
             x_title = 'dateTime'
             for y_title in df_header:
                 # deleteTraces, FigureWidget
@@ -294,15 +320,33 @@ def display_animated_graph(value):
         margin=dict(r=20, b=10, l=10, t=10))
     if 'Flight_Path' in value:
         if 'posNed_0' in df.columns:
-            figure_3d.add_trace(go.Scatter3d(
-                x=df['posNed_1'], y=df['posNed_0'], z=-df['posNed_2'], name='Flight Path',
-                mode='lines',
-                line=dict(color=-df['rosTime'], colorscale='Viridis', width=6)))
+            for job_idx in df['jobSeq'].unique():
+                df_jobSeq = df[df['jobSeq'] == job_idx]
+                figure_3d.add_trace(go.Scatter3d(
+                    x=df_jobSeq['posNed_1'], y=df_jobSeq['posNed_0'], z=-df_jobSeq['posNed_2'], 
+                    name='Flight Path (jobSeq = ' + str(job_idx) + ')',
+                    mode='lines',
+                    line=dict(color=-df_jobSeq['rosTime'], colorscale='Viridis', width=6),
+                    text = df_jobSeq['strFcMcMode'],
+                    hovertemplate =
+                        'fcMcMode: <b>%{text}</b><br>'+
+                        'X: %{x}<br>'+
+                        'Y: %{y}<br>'+
+                        'Z: %{z}'))
         elif 'posNed_m_0' in df.columns:
-            figure_3d.add_trace(go.Scatter3d(
-                x=df['posNed_m_1'], y=df['posNed_m_0'], z=-df['posNed_m_2'], name='Flight Path',
-                mode='lines',
-                line=dict(color=-df['rosTime'], colorscale='Viridis', width=6)))
+            for job_idx in df['jobSeq'].unique():
+                df_jobSeq = df[df['jobSeq'] == job_idx]
+                figure_3d.add_trace(go.Scatter3d(
+                    x=df_jobSeq['posNed_m_1'], y=df_jobSeq['posNed_m_0'], z=-df_jobSeq['posNed_m_2'], 
+                    name='Flight Path (jobSeq = ' + str(job_idx) + ')',
+                    mode='lines',
+                    line=dict(color=-df_jobSeq['rosTime'], colorscale='Viridis', width=6),
+                    text = df_jobSeq['strFcMcMode'],
+                    hovertemplate =
+                        'fcMcMode: <b>%{text}</b><br>'+
+                        'X: %{x}<br>'+
+                        'Y: %{y}<br>'+
+                        'Z: %{z}'))
     if 'Lidar_PC' in value:
         figure_3d.add_trace(go.Scatter3d(
             x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'], name='Lidar Point Cloud',
@@ -314,6 +358,6 @@ def display_animated_graph(value):
 if __name__ == '__main__':
     while(True):
         try:
-            app.run_server(debug=True, host='192.168.0.221')
+            app.run_server(debug=True, host='127.0.0.1')
         except Exception as e:
             print(e)
