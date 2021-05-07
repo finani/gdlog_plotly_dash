@@ -260,6 +260,7 @@ def update_data_upload(list_of_contents, list_of_names, list_of_dates):
 
 @app.callback(
     Output('graph_go', 'figure'),
+    Output('graph_go', 'config'),
     Input('io_data_dropdown', 'value')
 )
 def update_store_data(df_header):
@@ -293,11 +294,21 @@ def update_store_data(df_header):
                         )
                     )
                 )
-    return figure
+    config = dict({'displaylogo': False,
+                   'scrollZoom': True,
+                   'modeBarButtonsToAdd': ['drawline',
+                                           'drawopenpath',
+                                           'drawclosedpath',
+                                           'drawcircle',
+                                           'drawrect',
+                                           'eraseshape'
+                                           ]})
+    return figure, config
 
 
 @app.callback(
     Output("graph_go_3d_pos", "figure"),
+    Output("graph_go_3d_pos", "config"),
     [Input("output_select_data_checklist", "value")])
 def display_animated_graph(value):
     global df
@@ -344,7 +355,8 @@ def display_animated_graph(value):
             x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'], name='Lidar Point Cloud',
             mode='markers',
             marker=dict(size=3)))
-    return figure_3d
+    config_3d = dict({'displaylogo': False})
+    return figure_3d, config_3d
 
 
 if __name__ == '__main__':
