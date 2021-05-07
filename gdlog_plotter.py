@@ -88,6 +88,9 @@ csv_header_list = ['rosTime', 'flightMode', 'ctrlDeviceStatus',
 
 app.layout = html.Div([
     html.Div([
+        dcc.ConfirmDialog(
+            id='confirm',
+        ),
         dcc.Upload(
             id='input_upload_data',
             children=html.Div([
@@ -155,14 +158,7 @@ app.layout = html.Div([
             )
         ])
     ]),
-    dcc.Store(id='df_header_list_sorted'),
-    html.Hr(),
-    html.Details([
-        html.Summary('Input File Details'),
-        html.Div(id='output_data_upload')
-    ],
-        open=True
-    )
+    dcc.Store(id='df_header_list_sorted')
 ])
 
 
@@ -205,7 +201,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 df['dateTime'] = pd.to_datetime(
                     df['rosTime'], unit='s') + pd.DateOffset(hours=9)
                 df['diffTime'] = df['rosTime'].diff()
-                
+
                 df.loc[df.fcMcMode == 0, 'strFcMcMode'] = 'RC'
                 df.loc[df.fcMcMode == 1, 'strFcMcMode'] = 'Guide'
                 df.loc[df.fcMcMode == 2, 'strFcMcMode'] = 'Auto'
@@ -221,7 +217,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 fcMcMode_index = np.append(fcMcMode_index, len(df)-1)
                 fcMcMode_value = df.iloc[fcMcMode_index].strFcMcMode.tolist()
                 fcMcMode_color = df.iloc[fcMcMode_index].colorFcMcMode.tolist()
-                
+
                 df_header_list_sorted = sorted(df.columns.tolist())
             elif 'pointCloud' in filename:
                 if 'csv' in filename:
@@ -231,8 +227,8 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     np_pc = np_pc.reshape(-1, 3)
                     df_pc = pd.DataFrame(np_pc, columns=['x', 'y', 'z'])
                     parsing_log = parsing_log + 'pointCloud csv file!\n'
-            strNames = strNames + filename + '\n'
-            strDates = strDates + \
+            strNames = strNames + + filename + '\n'
+            strDates = strDates + + \
                 str(datetime.datetime.fromtimestamp(date)) + '\n'
             strDecoded = strDecoded + str(decoded[0:200]) + '...\n'
         except Exception as e:
@@ -240,33 +236,26 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
             return html.Div([
                 'There was an error processing this file.'
             ])
-    return html.Div([
-        html.P('[Parsing Log]'),
-        html.P(parsing_log, style={'white-space': 'pre-line'}),
-        html.P('[File Names]'),
-        html.P(strNames, style={'white-space': 'pre-line'}),
-        html.P('[Last Modified]'),
-        html.P(strDates, style={'white-space': 'pre-line'}),
-        html.Hr(),
-        html.P('[Raw Contents]'),
-        html.P(strDecoded, style={'white-space': 'pre-line'})
-    ]), df_header_list_sorted
+        confirm_msg = '[Parsing Log]\n' + parsing_log + \
+            '\n[File Names]\n' + strNames + '\n[Raw Contents]\n' + strDecoded
+    return confirm_msg, df_header_list_sorted
 
 
-@app.callback(Output('output_data_upload', 'children'),
-              Output('df_header_list_sorted', 'data'),
+@app.callback(Output('df_header_list_sorted', 'data'),
               Output('io_data_dropdown', 'options'),
+              Output('confirm', 'displayed'),
+              Output('confirm', 'message'),
               Input('input_upload_data', 'contents'),
               State('input_upload_data', 'filename'),
               State('input_upload_data', 'last_modified'))
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
     global df
     if list_of_contents is not None:
-        children, df_header_list_sorted = parse_contents(
+        confirm_msg, df_header_list_sorted = parse_contents(
             list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
-        return children, df_header_list_sorted, options
+        return df_header_list_sorted, options, True, confirm_msg
 
 
 @app.callback(
@@ -276,7 +265,7 @@ def update_data_upload(list_of_contents, list_of_names, list_of_dates):
 def update_store_data(df_header):
     global df, fcMcMode_index, fcMcMode_value, fcMcMode_color
     figure = go.Figure()
-    figure.update_layout(height=550,
+    figure.update_layout(height=600,
                          margin=dict(r=20, b=10, l=10, t=10))
     if len(df_header) > 0:
         if 'diffTime' in df_header:
@@ -284,7 +273,8 @@ def update_store_data(df_header):
         else:
             for idx in range(len(fcMcMode_index)-1):
                 figure.add_vrect(
-                    x0=df.iloc[fcMcMode_index[idx]].dateTime, x1=df.iloc[fcMcMode_index[idx+1]].dateTime, line_width=0,
+                    x0=df.iloc[fcMcMode_index[idx]
+                               ].dateTime, x1=df.iloc[fcMcMode_index[idx+1]].dateTime, line_width=0,
                     annotation_text=fcMcMode_value[idx], annotation_position="top left",
                     fillcolor=fcMcMode_color[idx], opacity=0.2)
             x_title = 'dateTime'
@@ -316,37 +306,39 @@ def display_animated_graph(value):
         xaxis_title='y_East',
         yaxis_title='x_North',
         zaxis_title='-z_Up'),
-        height=550,
+        height=600,
         margin=dict(r=20, b=10, l=10, t=10))
     if 'Flight_Path' in value:
         if 'posNed_0' in df.columns:
             for job_idx in df['jobSeq'].unique():
                 df_jobSeq = df[df['jobSeq'] == job_idx]
                 figure_3d.add_trace(go.Scatter3d(
-                    x=df_jobSeq['posNed_1'], y=df_jobSeq['posNed_0'], z=-df_jobSeq['posNed_2'], 
+                    x=df_jobSeq['posNed_1'], y=df_jobSeq['posNed_0'], z=-
+                    df_jobSeq['posNed_2'],
                     name='Flight Path (jobSeq = ' + str(job_idx) + ')',
                     mode='lines',
-                    line=dict(color=-df_jobSeq['rosTime'], colorscale='Viridis', width=6),
-                    text = df_jobSeq['strFcMcMode'],
-                    hovertemplate =
-                        'fcMcMode: <b>%{text}</b><br>'+
-                        'X: %{x}<br>'+
-                        'Y: %{y}<br>'+
-                        'Z: %{z}'))
+                    line=dict(color=-df_jobSeq['rosTime'],
+                              colorscale='Viridis', width=6),
+                    text=df_jobSeq['strFcMcMode'],
+                    hovertemplate='fcMcMode: <b>%{text}</b><br>' +
+                    'X: %{x}<br>' +
+                    'Y: %{y}<br>' +
+                    'Z: %{z}'))
         elif 'posNed_m_0' in df.columns:
             for job_idx in df['jobSeq'].unique():
                 df_jobSeq = df[df['jobSeq'] == job_idx]
                 figure_3d.add_trace(go.Scatter3d(
-                    x=df_jobSeq['posNed_m_1'], y=df_jobSeq['posNed_m_0'], z=-df_jobSeq['posNed_m_2'], 
+                    x=df_jobSeq['posNed_m_1'], y=df_jobSeq['posNed_m_0'], z=-
+                    df_jobSeq['posNed_m_2'],
                     name='Flight Path (jobSeq = ' + str(job_idx) + ')',
                     mode='lines',
-                    line=dict(color=-df_jobSeq['rosTime'], colorscale='Viridis', width=6),
-                    text = df_jobSeq['strFcMcMode'],
-                    hovertemplate =
-                        'fcMcMode: <b>%{text}</b><br>'+
-                        'X: %{x}<br>'+
-                        'Y: %{y}<br>'+
-                        'Z: %{z}'))
+                    line=dict(color=-df_jobSeq['rosTime'],
+                              colorscale='Viridis', width=6),
+                    text=df_jobSeq['strFcMcMode'],
+                    hovertemplate='fcMcMode: <b>%{text}</b><br>' +
+                    'X: %{x}<br>' +
+                    'Y: %{y}<br>' +
+                    'Z: %{z}'))
     if 'Lidar_PC' in value:
         figure_3d.add_trace(go.Scatter3d(
             x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'], name='Lidar Point Cloud',
@@ -358,6 +350,6 @@ def display_animated_graph(value):
 if __name__ == '__main__':
     while(True):
         try:
-            app.run_server(debug=True, host='127.0.0.1')
+            app.run_server(debug=True, host='10.10.150.22')
         except Exception as e:
             print(e)
