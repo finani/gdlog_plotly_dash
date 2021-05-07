@@ -227,10 +227,10 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     np_pc = np_pc.reshape(-1, 3)
                     df_pc = pd.DataFrame(np_pc, columns=['x', 'y', 'z'])
                     parsing_log = parsing_log + 'pointCloud csv file!\n'
-            strNames = strNames + + filename + '\n'
-            strDates = strDates + + \
+            strNames = strNames + filename + '\n'
+            strDates = strDates + \
                 str(datetime.datetime.fromtimestamp(date)) + '\n'
-            strDecoded = strDecoded + str(decoded[0:200]) + '...\n'
+            strDecoded = strDecoded + str(decoded[0:100]) + '...\n'
         except Exception as e:
             print(e)
             return html.Div([
