@@ -152,7 +152,7 @@ app.layout = html.Div([
                         {'x': [1, 2, 3], 'y': [2, 4, 3],
                             'type': 'bar', 'name': 'SF'},
                         {'x': [1, 2, 3], 'y': [5, 4, 3],
-                         'type': 'bar', 'name': 'Montreal'}
+                            'type': 'bar', 'name': 'Montreal'}
                     ]
                 }
             )
@@ -174,8 +174,8 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
             decoded = base64.b64decode(content_string)
             if 'gdLog' in filename:
                 if 'csv' in filename:
-                    df = pd.read_csv(
-                        io.StringIO(decoded.decode('utf-8')), low_memory=False)
+                    df = pd.read_csv(io.StringIO(decoded.decode('utf-8')),
+                                     low_memory=False)
                     parsing_log = parsing_log + 'gdLog csv file!\n'
                 elif 'bin' in filename:
                     chunk = decoded[0:len(decoded)//616*616]
@@ -198,8 +198,8 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 # Ignore data before 2020 January 1st Wednesday AM 1:00:00
                 df = df[df['rosTime'] > 1577840400]
                 df.columns = df.columns.str.strip()
-                df['dateTime'] = pd.to_datetime(
-                    df['rosTime'], unit='s') + pd.DateOffset(hours=9)
+                df['dateTime'] = pd.to_datetime(df['rosTime'], unit='s') + \
+                    pd.DateOffset(hours=9)
                 df['diffTime'] = df['rosTime'].diff()
 
                 df.loc[df.fcMcMode == 0, 'strFcMcMode'] = 'RC'
@@ -221,8 +221,8 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 df_header_list_sorted = sorted(df.columns.tolist())
             elif 'pointCloud' in filename:
                 if 'csv' in filename:
-                    np_pc = np.loadtxt(
-                        io.StringIO(decoded.decode('utf-8')), delimiter=',')
+                    np_pc = np.loadtxt(io.StringIO(decoded.decode('utf-8')),
+                                       delimiter=',')
                     np_pc = np_pc.astype(np.float)
                     np_pc = np_pc.reshape(-1, 3)
                     df_pc = pd.DataFrame(np_pc, columns=['x', 'y', 'z'])
@@ -251,8 +251,8 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
     global df
     if list_of_contents is not None:
-        confirm_msg, df_header_list_sorted = parse_contents(
-            list_of_contents, list_of_names, list_of_dates)
+        confirm_msg, df_header_list_sorted = \
+            parse_contents(list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
         return df_header_list_sorted, options, True, confirm_msg
@@ -274,10 +274,13 @@ def update_store_data(df_header):
         else:
             for idx in range(len(fcMcMode_index)-1):
                 figure.add_vrect(
-                    x0=df.iloc[fcMcMode_index[idx]
-                               ].dateTime, x1=df.iloc[fcMcMode_index[idx+1]].dateTime, line_width=0,
-                    annotation_text=fcMcMode_value[idx], annotation_position="top left",
-                    fillcolor=fcMcMode_color[idx], opacity=0.2)
+                    x0=df.iloc[fcMcMode_index[idx]].dateTime,
+                    x1=df.iloc[fcMcMode_index[idx+1]].dateTime,
+                    line_width=0,
+                    annotation_text=fcMcMode_value[idx],
+                    annotation_position="top left",
+                    fillcolor=fcMcMode_color[idx],
+                    opacity=0.2)
             x_title = 'dateTime'
             for y_title in df_header:
                 # deleteTraces, FigureWidget
@@ -285,15 +288,15 @@ def update_store_data(df_header):
                     x=df[x_title], y=df[y_title], name=y_title,
                     mode='lines',
                     line=dict(width=3)))
-                figure.update_layout(
-                    xaxis_title=x_title,
-                    xaxis=dict(
-                        rangeslider=dict(
-                            visible=True,
-                            thickness=0.1
-                        )
+            figure.update_layout(
+                xaxis_title=x_title,
+                xaxis=dict(
+                    rangeslider=dict(
+                        visible=True,
+                        thickness=0.1
                     )
                 )
+            )
     config = dict({'displaylogo': False,
                    'scrollZoom': True,
                    'modeBarButtonsToAdd': ['drawline',
@@ -324,8 +327,9 @@ def display_animated_graph(value):
             for job_idx in df['jobSeq'].unique():
                 df_jobSeq = df[df['jobSeq'] == job_idx]
                 figure_3d.add_trace(go.Scatter3d(
-                    x=df_jobSeq['posNed_1'], y=df_jobSeq['posNed_0'], z=-
-                    df_jobSeq['posNed_2'],
+                    x=df_jobSeq['posNed_1'],
+                    y=df_jobSeq['posNed_0'],
+                    z=-df_jobSeq['posNed_2'],
                     name='Flight Path (jobSeq = ' + str(job_idx) + ')',
                     mode='lines',
                     line=dict(color=-df_jobSeq['rosTime'],
@@ -339,8 +343,9 @@ def display_animated_graph(value):
             for job_idx in df['jobSeq'].unique():
                 df_jobSeq = df[df['jobSeq'] == job_idx]
                 figure_3d.add_trace(go.Scatter3d(
-                    x=df_jobSeq['posNed_m_1'], y=df_jobSeq['posNed_m_0'], z=-
-                    df_jobSeq['posNed_m_2'],
+                    x=df_jobSeq['posNed_m_1'],
+                    y=df_jobSeq['posNed_m_0'],
+                    z=-df_jobSeq['posNed_m_2'],
                     name='Flight Path (jobSeq = ' + str(job_idx) + ')',
                     mode='lines',
                     line=dict(color=-df_jobSeq['rosTime'],
@@ -352,7 +357,8 @@ def display_animated_graph(value):
                     'Z: %{z}'))
     if 'Lidar_PC' in value:
         figure_3d.add_trace(go.Scatter3d(
-            x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'], name='Lidar Point Cloud',
+            x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
+            name='Lidar Point Cloud',
             mode='markers',
             marker=dict(size=3)))
     config_3d = dict({'displaylogo': False})
@@ -362,6 +368,6 @@ def display_animated_graph(value):
 if __name__ == '__main__':
     while(True):
         try:
-            app.run_server(debug=True, host='10.10.150.22')
+            app.run_server(debug=True, host='127.0.0.1')
         except Exception as e:
             print(e)
