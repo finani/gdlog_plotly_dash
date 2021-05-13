@@ -38,8 +38,8 @@ fcMcMode_index = []
 fcMcMode_value = []
 fcMcMode_color = []
 
-bin_data_type = 'dBBBBBBffffffffffffBBBBBdddffffffffHBHBddddddddddddfffffffffffBBBffffffffffffffffffffffffffffffffBfBddfddfffffffffffffffffffffffffffffffffBBfffHH'
-
+bin_data_length = 616
+bin_data_type = 'dBBBBBBffffffffffffBBBBBdddffffffffHBHBddddddddddddfffffffffffBBBffffffffffffffffffffffffffffffffBfBddfddfffffffffffffffffffffffffffffffffBBfffBBBB'
 csv_header_list = ['rosTime', 'flightMode', 'ctrlDeviceStatus',
                    'fcMcMode', 'nSat', 'gpsFix', 'jobSeq',
                    'velNedGps_mps_0', 'velNedGps_mps_1', 'velNedGps_mps_2',
@@ -84,7 +84,7 @@ csv_header_list = ['rosTime', 'flightMode', 'ctrlDeviceStatus',
                    'posCmdNed_m_0', 'posCmdNed_m_1', 'posCmdNed_m_2',
                    'missionType', 'jobType',
                    'bladeTravelDistance',
-                   'trajTimeCur', 'trajTimeMax', 'pad_1', 'pad_2']
+                   'trajTimeCur', 'trajTimeMax', 'pad_1', 'pad_2', 'pad_3', 'pad_4']
 
 app.layout = html.Div([
     html.Div([
@@ -162,8 +162,25 @@ app.layout = html.Div([
 ])
 
 
+def data_type_to_length(bin_data_type):
+    bin_data_length_from_type = 0
+    for c in bin_data_type:
+        type_length = 0
+        if c == 'd':
+            type_length = 8
+        elif c == 'f':
+            type_length = 4
+        elif c == 'H':
+            type_length = 2
+        elif c == 'B':
+            type_length = 1
+        bin_data_length_from_type = bin_data_length_from_type + type_length
+    return bin_data_length_from_type
+
+
 def parse_contents(list_of_contents, list_of_names, list_of_dates):
-    global df, df_pc, fcMcMode_index, fcMcMode_value, fcMcMode_color, df_header_list_sorted
+    global df, df_pc, fcMcMode_index, fcMcMode_value, fcMcMode_color, \
+        df_header_list_sorted, bin_data_length, bin_data_type, csv_header_list
     parsing_log = ''
     strNames = ''
     strDates = ''
@@ -178,9 +195,37 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                                      low_memory=False)
                     parsing_log = parsing_log + 'gdLog csv file!\n'
                 elif 'bin' in filename:
-                    chunk = decoded[0:len(decoded)//616*616]
-                    data_count = 0
+                    # chunk = decoded[0:len(decoded)//616*616]
                     with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
+                        if chr(decoded[0]) == 'n':
+                            print("New_Format")
+                            FcLogHeaderSize = decoded[2] << 8 | decoded[1]
+                            FcLogTypeListSize = decoded[4] << 8 | decoded[3]
+                            FcLogDataSize = decoded[6] << 8 | decoded[5]
+                            FcLogHeader = \
+                                decoded[7:7+FcLogHeaderSize].decode('ascii')
+                            FcLogTypeList = \
+                                decoded[7+FcLogHeaderSize:7+FcLogHeaderSize+FcLogTypeListSize]\
+                                .decode('ascii')
+
+                            csv_header_list = FcLogHeader.split(",")
+                            bin_data_type = FcLogTypeList
+                            bin_data_length = FcLogDataSize
+
+                            bin_data_length_from_type = \
+                                data_type_to_length(bin_data_type)
+                            for idx in range(bin_data_length
+                                             - bin_data_length_from_type
+                                             - 20):  # structure padding size: 20
+                                csv_header_list.append('pad_'+str(idx))
+                                bin_data_type = bin_data_type + 'B'
+
+                            decoded = decoded[7+FcLogHeaderSize
+                                              + FcLogTypeListSize
+                                              + FcLogDataSize:]
+                        chunk = decoded[0:len(decoded)
+                                        // bin_data_length*bin_data_length]
+                        data_count = 0
                         wr = csv.writer(f_csv)
                         wr.writerow(csv_header_list)
                         for unpacked_chunk in struct.iter_unpack(bin_data_type, chunk):
@@ -188,35 +233,158 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                             if data_count % 3000 == 0:
                                 print("data_count: " + str(data_count))
                             data_count += 1
+                        print("data_count: " + str(data_count) +
+                              ", total_time: " + str(data_count/50) + " s (50Hz)")
                         print("Saved: " + f_csv.name)
                     df = pd.read_csv(filename.split('.')[0] + '.csv')
                     parsing_log = parsing_log + 'gdLog bin file!\n'
                 elif 'xls' in filename:
                     df = pd.read_excel(io.BytesIO(decoded))
                     parsing_log = parsing_log + 'gdLog xls file!\n'
+
                 # dataFrame Post-Processing
                 # Ignore data before 2020 January 1st Wednesday AM 1:00:00
                 df = df[df['rosTime'] > 1577840400]
                 df.columns = df.columns.str.strip()
-                df['dateTime'] = pd.to_datetime(df['rosTime'], unit='s') + \
-                    pd.DateOffset(hours=9)
-                df['diffTime'] = df['rosTime'].diff()
+                if 'rosTime' in df.columns:
+                    df['dateTime'] = pd.to_datetime(df['rosTime'], unit='s') + \
+                        pd.DateOffset(hours=9)
+                    df['diffTime'] = df['rosTime'].diff()
 
-                df.loc[df.fcMcMode == 0, 'strFcMcMode'] = 'RC'
-                df.loc[df.fcMcMode == 1, 'strFcMcMode'] = 'Guide'
-                df.loc[df.fcMcMode == 2, 'strFcMcMode'] = 'Auto'
-                df.loc[df.fcMcMode == 3, 'strFcMcMode'] = 'Boot'
-                df.loc[df.fcMcMode == 0, 'colorFcMcMode'] = 'yellow'
-                df.loc[df.fcMcMode == 1, 'colorFcMcMode'] = 'Blue'
-                df.loc[df.fcMcMode == 2, 'colorFcMcMode'] = 'turquoise'
-                df.loc[df.fcMcMode == 3, 'colorFcMcMode'] = 'LightPink'
-                df['diffFcMcMode'] = df['fcMcMode'].diff()
+                if 'fcMcMode' in df.columns:
+                    df.loc[df.fcMcMode == 0, 'strFcMcMode'] = 'RC'
+                    df.loc[df.fcMcMode == 1, 'strFcMcMode'] = 'Guide'
+                    df.loc[df.fcMcMode == 2, 'strFcMcMode'] = 'Auto'
+                    df.loc[df.fcMcMode == 3, 'strFcMcMode'] = 'Boot'
+                    df.loc[df.fcMcMode == 0, 'colorFcMcMode'] = 'yellow'
+                    df.loc[df.fcMcMode == 1, 'colorFcMcMode'] = 'Blue'
+                    df.loc[df.fcMcMode == 2, 'colorFcMcMode'] = 'turquoise'
+                    df.loc[df.fcMcMode == 3, 'colorFcMcMode'] = 'LightPink'
+                    df['diffFcMcMode'] = df['fcMcMode'].diff()
 
-                fcMcMode_index = df.index[df['diffFcMcMode'] != 0].tolist()
-                fcMcMode_index = fcMcMode_index - fcMcMode_index[0]
-                fcMcMode_index = np.append(fcMcMode_index, len(df)-1)
-                fcMcMode_value = df.iloc[fcMcMode_index].strFcMcMode.tolist()
-                fcMcMode_color = df.iloc[fcMcMode_index].colorFcMcMode.tolist()
+                    fcMcMode_index = df.index[df['diffFcMcMode'] != 0].tolist()
+                    fcMcMode_index = fcMcMode_index - fcMcMode_index[0]
+                    fcMcMode_index = np.append(fcMcMode_index, len(df)-1)
+                    fcMcMode_value = df.iloc[fcMcMode_index].strFcMcMode.tolist()
+                    fcMcMode_color = df.iloc[fcMcMode_index].colorFcMcMode.tolist()
+
+                if 'jobType' in df.columns:
+                    df.loc[df.jobType == 0, 'strJobType'] = 'INIT'
+                    df.loc[df.jobType == 1, 'strJobType'] = 'STANDARD'
+                    df.loc[df.jobType == 2, 'strJobType'] = 'TURN'
+                    df.loc[df.jobType == 3, 'strJobType'] = 'CAM'
+                    df.loc[df.jobType == 4, 'strJobType'] = 'WAYPOINT'
+                    df.loc[df.jobType == 5, 'strJobType'] = 'TRAJECTORY'
+                    df.loc[df.jobType == 6, 'strJobType'] = 'REFSIGTEST'
+                    df.loc[df.jobType == 7, 'strJobType'] = 'TAKEOFF'
+                    df.loc[df.jobType == 8, 'strJobType'] = 'LAND'
+                    df.loc[df.jobType == 9, 'strJobType'] = 'RTB'
+                    df.loc[df.jobType == 10, 'strJobType'] = 'PATHPLANNING'
+                    df.loc[df.jobType == 11, 'strJobType'] = 'SKELETONMODELESTIMATION'
+                    df.loc[df.jobType == 12, 'strJobType'] = 'HOPPINGBLADESURFACE'
+                    df.loc[df.jobType == 13, 'strJobType'] = 'BLADEFOLLOWING'
+                    df.loc[df.jobType == 255, 'strJobType'] = 'NONE'
+
+                if 'missionType' in df.columns:
+                    df.loc[df.missionType == 0, 'strMissionType'] = '5_1'
+                    df.loc[df.missionType == 1, 'strMissionType'] = '5_2'
+                    df.loc[df.missionType == 2, 'strMissionType'] = '4_1'
+                    df.loc[df.missionType == 3, 'strMissionType'] = '4_2'
+                    df.loc[df.missionType == 4, 'strMissionType'] = '4_3'
+                    df.loc[df.missionType == 5, 'strMissionType'] = 'WP'
+                    df.loc[df.missionType == 6, 'strMissionType'] = '3_1'
+                    df.loc[df.missionType == 7, 'strMissionType'] = '3_2'
+                    df.loc[df.missionType == 8, 'strMissionType'] = '6_1'
+                    df.loc[df.missionType == 9, 'strMissionType'] = '6_2'
+                    df.loc[df.missionType == 10, 'strMissionType'] = '6_1_SP'
+                    df.loc[df.missionType == 11, 'strMissionType'] = '6_2_SP'
+                    df.loc[df.missionType == 12, 'strMissionType'] = 'HI'
+
+                if 'gpsFix' in df.columns:
+                    df.loc[df.gpsFix == 0, 'strGpsFix'] = 'No_GPS'
+                    df.loc[df.gpsFix == 1, 'strGpsFix'] = 'NO_FIX'
+                    df.loc[df.gpsFix == 2, 'strGpsFix'] = '2D_FIX'
+                    df.loc[df.gpsFix == 3, 'strGpsFix'] = '3D_FIX'
+                    df.loc[df.gpsFix == 4, 'strGpsFix'] = '3D_DGPS/SBAS_AIDED'
+                    df.loc[df.gpsFix == 5, 'strGpsFix'] = '3D_RTK_FLOAT'
+                    df.loc[df.gpsFix == 6, 'strGpsFix'] = '3D_RTK_FIXED'
+                    df.loc[df.gpsFix == 7, 'strGpsFix'] = '3D_STATIC'
+                    df.loc[df.gpsFix == 8, 'strGpsFix'] = '3D_PPP'
+
+                if 'ctrlStruct' in df.columns:
+                    df.loc[df.ctrlStruct == 0, 'strCtrlStruct'] = 'CTRL_STRUCT_NONE'
+                    df.loc[df.ctrlStruct == 1, 'strCtrlStruct'] = 'VELI_PID0_ATTI_RPD'
+                    df.loc[df.ctrlStruct == 2, 'strCtrlStruct'] = 'VELI_PID0CA_ATTI_RPD'
+                    df.loc[df.ctrlStruct == 3, 'strCtrlStruct'] = 'VELB_PID0_ATTI_RPD'
+                    df.loc[df.ctrlStruct == 4, 'strCtrlStruct'] = 'VELB_PID0CA_ATTI_RPD'
+                    df.loc[df.ctrlStruct == 5, 'strCtrlStruct'] = 'VELB_0_VELB'
+                    df.loc[df.ctrlStruct == 6, 'strCtrlStruct'] = 'VELB_0CA_VELB'
+                    df.loc[df.ctrlStruct == 7, 'strCtrlStruct'] = 'VELI_0CA_VELI'
+                    df.loc[df.ctrlStruct == 8, 'strCtrlStruct'] = 'POSI_PID0CA_VELI'
+                    df.loc[df.ctrlStruct == 9, 'strCtrlStruct'] = 'POSI_PID0CA_ATTI'
+                    df.loc[df.ctrlStruct == 10, 'strCtrlStruct'] = 'POSBVELB_PID0CA_ATTI'
+                    df.loc[df.ctrlStruct == 11, 'strCtrlStruct'] = 'POSI_0_POSI'
+                    df.loc[df.ctrlStruct == 12, 'strCtrlStruct'] = 'POSI_CA_POSI'
+                    df.loc[df.ctrlStruct == 13, 'strCtrlStruct'] = 'TRAJ_PID0AC_ATTI_RPD'
+                    df.loc[df.ctrlStruct == 14, 'strCtrlStruct'] = 'ATTI_0_ATTI'
+
+                if 'ctrlSetpointType' in df.columns:
+                    df.loc[df.ctrlSetpointType == 0, 'strCtrlSetpointType'] = 'CTRL_VECTYPE_NONE'
+                    df.loc[df.ctrlSetpointType == 1, 'strCtrlSetpointType'] = 'LLH_POS'
+                    df.loc[df.ctrlSetpointType == 2, 'strCtrlSetpointType'] = 'NEDABS_POS'
+                    df.loc[df.ctrlSetpointType == 3, 'strCtrlSetpointType'] = 'NEALTABS_POS'
+                    df.loc[df.ctrlSetpointType == 4, 'strCtrlSetpointType'] = 'NEALTREL_POS'
+                    df.loc[df.ctrlSetpointType == 5, 'strCtrlSetpointType'] = 'XYALT_POS'
+                    df.loc[df.ctrlSetpointType == 6, 'strCtrlSetpointType'] = 'XYD_POS'
+                    df.loc[df.ctrlSetpointType == 7, 'strCtrlSetpointType'] = 'NED_VEL'
+                    df.loc[df.ctrlSetpointType == 8, 'strCtrlSetpointType'] = 'UVW_VEL'
+                    df.loc[df.ctrlSetpointType == 9, 'strCtrlSetpointType'] = 'EULER_ATT'
+                    df.loc[df.ctrlSetpointType == 10, 'strCtrlSetpointType'] = 'TRAJ_VEC'
+
+                if 'ctrlSpType' in df.columns:
+                    df.loc[df.ctrlSpType == 0, 'strCtrlSpType'] = 'CTRL_VECTYPE_NONE'
+                    df.loc[df.ctrlSpType == 1, 'strCtrlSpType'] = 'LLH_POS'
+                    df.loc[df.ctrlSpType == 2, 'strCtrlSpType'] = 'NEDABS_POS'
+                    df.loc[df.ctrlSpType == 3, 'strCtrlSpType'] = 'NEALTABS_POS'
+                    df.loc[df.ctrlSpType == 4, 'strCtrlSpType'] = 'NEALTREL_POS'
+                    df.loc[df.ctrlSpType == 5, 'strCtrlSpType'] = 'XYALT_POS'
+                    df.loc[df.ctrlSpType == 6, 'strCtrlSpType'] = 'XYD_POS'
+                    df.loc[df.ctrlSpType == 7, 'strCtrlSpType'] = 'NED_VEL'
+                    df.loc[df.ctrlSpType == 8, 'strCtrlSpType'] = 'UVW_VEL'
+                    df.loc[df.ctrlSpType == 9, 'strCtrlSpType'] = 'EULER_ATT'
+                    df.loc[df.ctrlSpType == 10, 'strCtrlSpType'] = 'TRAJ_VEC'
+
+                if 'ctrlOutputType' in df.columns:
+                    df.loc[df.ctrlOutputType == 0, 'strCtrlOutputType'] = 'CTRL_VECTYPE_NONE'
+                    df.loc[df.ctrlOutputType == 1, 'strCtrlOutputType'] = 'LLH_POS'
+                    df.loc[df.ctrlOutputType == 2, 'strCtrlOutputType'] = 'NEDABS_POS'
+                    df.loc[df.ctrlOutputType == 3, 'strCtrlOutputType'] = 'NEALTABS_POS'
+                    df.loc[df.ctrlOutputType == 4, 'strCtrlOutputType'] = 'NEALTREL_POS'
+                    df.loc[df.ctrlOutputType == 5, 'strCtrlOutputType'] = 'XYALT_POS'
+                    df.loc[df.ctrlOutputType == 6, 'strCtrlOutputType'] = 'XYD_POS'
+                    df.loc[df.ctrlOutputType == 7, 'strCtrlOutputType'] = 'NED_VEL'
+                    df.loc[df.ctrlOutputType == 8, 'strCtrlOutputType'] = 'UVW_VEL'
+                    df.loc[df.ctrlOutputType == 9, 'strCtrlOutputType'] = 'EULER_ATT'
+                    df.loc[df.ctrlOutputType == 10, 'strCtrlOutputType'] = 'TRAJ_VEC'
+
+                if 'ctrlOpType' in df.columns:
+                    df.loc[df.ctrlOpType == 0, 'strCtrlOpType'] = 'CTRL_VECTYPE_NONE'
+                    df.loc[df.ctrlOpType == 1, 'strCtrlOpType'] = 'LLH_POS'
+                    df.loc[df.ctrlOpType == 2, 'strCtrlOpType'] = 'NEDABS_POS'
+                    df.loc[df.ctrlOpType == 3, 'strCtrlOpType'] = 'NEALTABS_POS'
+                    df.loc[df.ctrlOpType == 4, 'strCtrlOpType'] = 'NEALTREL_POS'
+                    df.loc[df.ctrlOpType == 5, 'strCtrlOpType'] = 'XYALT_POS'
+                    df.loc[df.ctrlOpType == 6, 'strCtrlOpType'] = 'XYD_POS'
+                    df.loc[df.ctrlOpType == 7, 'strCtrlOpType'] = 'NED_VEL'
+                    df.loc[df.ctrlOpType == 8, 'strCtrlOpType'] = 'UVW_VEL'
+                    df.loc[df.ctrlOpType == 9, 'strCtrlOpType'] = 'EULER_ATT'
+                    df.loc[df.ctrlOpType == 10, 'strCtrlOpType'] = 'TRAJ_VEC'
+
+                if 'yawOpType' in df.columns:
+                    df.loc[df.yawOpType == 0, 'strYawOpType'] = 'ANGLE_REL'
+                    df.loc[df.yawOpType == 1, 'strYawOpType'] = 'ANGLE_ABS'
+                    df.loc[df.yawOpType == 2, 'strYawOpType'] = 'RATE'
+                    df.loc[df.yawOpType == 3, 'strYawOpType'] = 'FOWARD'
 
                 df_header_list_sorted = sorted(df.columns.tolist())
             elif 'pointCloud' in filename:
