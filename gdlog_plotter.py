@@ -18,6 +18,7 @@ import dash_html_components as html
 
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 def signal_handler(signal, frame):
@@ -129,6 +130,13 @@ app.layout = html.Div([
             html.Label([
                 dcc.Dropdown(
                     id='io_data_dropdown',
+                    multi=True,
+                    placeholder="Select Data"
+                ),
+            ]),
+            html.Label([
+                dcc.Dropdown(
+                    id='io_data_dropdown_2',
                     multi=True,
                     placeholder="Select Data"
                 )
@@ -411,6 +419,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
 
 @app.callback(Output('df_header_list_sorted', 'data'),
               Output('io_data_dropdown', 'options'),
+              Output('io_data_dropdown_2', 'options'),
               Output('confirm', 'displayed'),
               Output('confirm', 'message'),
               Input('input_upload_data', 'contents'),
@@ -423,23 +432,54 @@ def update_data_upload(list_of_contents, list_of_names, list_of_dates):
             parse_contents(list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
-        return df_header_list_sorted, options, True, confirm_msg
+        return df_header_list_sorted, options, options, True, confirm_msg
 
 
 @app.callback(
     Output('graph_go', 'figure'),
     Output('graph_go', 'config'),
-    Input('io_data_dropdown', 'value')
+    Input('io_data_dropdown', 'value'),
+    Input('io_data_dropdown_2', 'value')
 )
-def update_store_data(df_header):
+def update_graph_data(df_header, df_header_2):
     global df, fcMcMode_index, fcMcMode_value, fcMcMode_color
-    figure = go.Figure()
-    figure.update_layout(height=600,
+    # figure = go.Figure()
+    figure = make_subplots(
+        rows=2,
+        cols=1,
+        shared_xaxes=True
+    )
+    figure.update_layout(height=710,
                          margin=dict(r=20, b=10, l=10, t=10))
     if len(df_header) > 0:
         if 'diffTime' in df_header:
-            figure.add_trace(go.Histogram(x=df['diffTime']))
+            figure.add_trace(go.Histogram(x=df['diffTime']), 
+                             row=1, 
+                             col=1)
         else:
+            x_title = 'dateTime'
+            try:
+                for y_title in df_header:
+                    # deleteTraces, FigureWidget
+                    figure.add_trace(go.Scatter(
+                        x=df[x_title], y=df[y_title], name=y_title,
+                        mode='lines',
+                        line=dict(width=3)), 
+                        row=1, 
+                        col=1)
+            except Exception as e:
+                print(e)
+            try:
+                for y_title in df_header_2:
+                    # deleteTraces, FigureWidget
+                    figure.add_trace(go.Scatter(
+                        x=df[x_title], y=df[y_title], name=y_title,
+                        mode='lines',
+                        line=dict(width=3)), 
+                        row=2, 
+                        col=1)
+            except Exception as e:
+                print(e)
             for idx in range(len(fcMcMode_index)-1):
                 figure.add_vrect(
                     x0=df.iloc[fcMcMode_index[idx]].dateTime,
@@ -448,16 +488,9 @@ def update_store_data(df_header):
                     annotation_text=fcMcMode_value[idx],
                     annotation_position="top left",
                     fillcolor=fcMcMode_color[idx],
+                    layer="below",
                     opacity=0.2)
-            x_title = 'dateTime'
-            for y_title in df_header:
-                # deleteTraces, FigureWidget
-                figure.add_trace(go.Scatter(
-                    x=df[x_title], y=df[y_title], name=y_title,
-                    mode='lines',
-                    line=dict(width=3)))
             figure.update_layout(
-                xaxis_title=x_title,
                 xaxis=dict(
                     rangeslider=dict(
                         visible=True,
@@ -481,7 +514,7 @@ def update_store_data(df_header):
     Output("graph_go_3d_pos", "figure"),
     Output("graph_go_3d_pos", "config"),
     [Input("output_select_data_checklist", "value")])
-def display_animated_graph(value):
+def update_3d_graph_data(value):
     global df
     figure_3d = go.Figure()
     figure_3d.update_layout(scene=dict(
