@@ -641,7 +641,7 @@ def update_graph_data(df_header, df_header_2,
             figure.update_layout(
                 xaxis=dict(
                     rangeslider=dict(
-                        visible=True,
+                        visible=False,
                         thickness=0.1
                     )
                 )
