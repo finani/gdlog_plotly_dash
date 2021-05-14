@@ -34,10 +34,21 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets,
 
 df = pd.DataFrame()
 df_pc = pd.DataFrame()
-df_header_list_sorted = []
 fcMcMode_index = []
 fcMcMode_value = []
 fcMcMode_color = []
+
+prev_mission_clicks = 0
+prev_gps_clicks = 0
+prev_rpd_roll_clicks = 0
+prev_rpd_pitch_clicks = 0
+prev_rpd_down_clicks = 0
+prev_vel_u_clicks = 0
+prev_vel_v_clicks = 0
+prev_vel_w_clicks = 0
+prev_pos_n_clicks = 0
+prev_pos_e_clicks = 0
+prev_pos_d_clicks = 0
 
 bin_data_length = 616
 bin_data_type = 'dBBBBBBffffffffffffBBBBBdddffffffffHBHBddddddddddddfffffffffffBBBffffffffffffffffffffffffffffffffBfBddfddfffffffffffffffffffffffffffffffffBBfffBBBB'
@@ -141,6 +152,39 @@ app.layout = html.Div([
                     placeholder="Select Data"
                 )
             ]),
+            html.Button('mission', 
+                        id='input_mission_button',
+                        n_clicks=0),
+            html.Button('gps', 
+                        id='input_gps_button', 
+                        n_clicks=0),
+            html.Button('rpd_roll', 
+                        id='input_rpd_roll_button', 
+                        n_clicks=0),
+            html.Button('rpd_pitch', 
+                        id='input_rpd_pitch_button', 
+                        n_clicks=0),
+            html.Button('rpd_down', 
+                        id='input_rpd_down_button', 
+                        n_clicks=0),
+            html.Button('vel_u', 
+                        id='input_vel_u_button', 
+                        n_clicks=0),
+            html.Button('vel_v', 
+                        id='input_vel_v_button', 
+                        n_clicks=0),
+            html.Button('vel_w', 
+                        id='input_vel_w_button', 
+                        n_clicks=0),
+            html.Button('pos_n', 
+                        id='input_pos_n_button', 
+                        n_clicks=0),
+            html.Button('pos_e', 
+                        id='input_pos_e_button', 
+                        n_clicks=0),
+            html.Button('pos_d', 
+                        id='input_pos_d_button', 
+                        n_clicks=0),
             dcc.Graph(id='graph_go')
         ]),
         dcc.Tab(label='3D Data Plot', children=[
@@ -165,8 +209,7 @@ app.layout = html.Div([
                 }
             )
         ])
-    ]),
-    dcc.Store(id='df_header_list_sorted')
+    ])
 ])
 
 
@@ -188,7 +231,7 @@ def data_type_to_length(bin_data_type):
 
 def parse_contents(list_of_contents, list_of_names, list_of_dates):
     global df, df_pc, fcMcMode_index, fcMcMode_value, fcMcMode_color, \
-        df_header_list_sorted, bin_data_length, bin_data_type, csv_header_list
+        bin_data_length, bin_data_type, csv_header_list
     parsing_log = ''
     strNames = ''
     strDates = ''
@@ -203,7 +246,6 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                                      low_memory=False)
                     parsing_log = parsing_log + 'gdLog csv file!\n'
                 elif 'bin' in filename:
-                    # chunk = decoded[0:len(decoded)//616*616]
                     with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
                         if chr(decoded[0]) == 'n':
                             print("New_Format")
@@ -294,19 +336,19 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df.loc[df.jobType == 255, 'strJobType'] = 'NONE'
 
                 if 'missionType' in df.columns:
-                    df.loc[df.missionType == 0, 'strMissionType'] = '5_1'
-                    df.loc[df.missionType == 1, 'strMissionType'] = '5_2'
-                    df.loc[df.missionType == 2, 'strMissionType'] = '4_1'
-                    df.loc[df.missionType == 3, 'strMissionType'] = '4_2'
-                    df.loc[df.missionType == 4, 'strMissionType'] = '4_3'
-                    df.loc[df.missionType == 5, 'strMissionType'] = 'WP'
-                    df.loc[df.missionType == 6, 'strMissionType'] = '3_1'
-                    df.loc[df.missionType == 7, 'strMissionType'] = '3_2'
-                    df.loc[df.missionType == 8, 'strMissionType'] = '6_1'
-                    df.loc[df.missionType == 9, 'strMissionType'] = '6_2'
-                    df.loc[df.missionType == 10, 'strMissionType'] = '6_1_SP'
-                    df.loc[df.missionType == 11, 'strMissionType'] = '6_2_SP'
-                    df.loc[df.missionType == 12, 'strMissionType'] = 'HI'
+                    df.loc[df.missionType == 0, 'strMissionType'] = 'MISSION_TYPE_5_1'
+                    df.loc[df.missionType == 1, 'strMissionType'] = 'MISSION_TYPE_5_2'
+                    df.loc[df.missionType == 2, 'strMissionType'] = 'MISSION_TYPE_4_1'
+                    df.loc[df.missionType == 3, 'strMissionType'] = 'MISSION_TYPE_4_2'
+                    df.loc[df.missionType == 4, 'strMissionType'] = 'MISSION_TYPE_4_3'
+                    df.loc[df.missionType == 5, 'strMissionType'] = 'MISSION_TYPE_WP'
+                    df.loc[df.missionType == 6, 'strMissionType'] = 'MISSION_TYPE_3_1'
+                    df.loc[df.missionType == 7, 'strMissionType'] = 'MISSION_TYPE_3_2'
+                    df.loc[df.missionType == 8, 'strMissionType'] = 'MISSION_TYPE_6_1'
+                    df.loc[df.missionType == 9, 'strMissionType'] = 'MISSION_TYPE_6_2'
+                    df.loc[df.missionType == 10, 'strMissionType'] = 'MISSION_TYPE_6_1_SP'
+                    df.loc[df.missionType == 11, 'strMissionType'] = 'MISSION_TYPE_6_2_SP'
+                    df.loc[df.missionType == 12, 'strMissionType'] = 'MISSION_TYPE_HI'
 
                 if 'gpsFix' in df.columns:
                     df.loc[df.gpsFix == 0, 'strGpsFix'] = 'No_GPS'
@@ -417,14 +459,14 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
     return confirm_msg, df_header_list_sorted
 
 
-@app.callback(Output('df_header_list_sorted', 'data'),
-              Output('io_data_dropdown', 'options'),
+@app.callback(Output('io_data_dropdown', 'options'),
               Output('io_data_dropdown_2', 'options'),
               Output('confirm', 'displayed'),
               Output('confirm', 'message'),
               Input('input_upload_data', 'contents'),
               State('input_upload_data', 'filename'),
-              State('input_upload_data', 'last_modified'))
+              State('input_upload_data', 'last_modified')
+)
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
     global df
     if list_of_contents is not None:
@@ -432,24 +474,132 @@ def update_data_upload(list_of_contents, list_of_names, list_of_dates):
             parse_contents(list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
-        return df_header_list_sorted, options, options, True, confirm_msg
+        return options, options, True, confirm_msg
 
 
 @app.callback(
     Output('graph_go', 'figure'),
     Output('graph_go', 'config'),
     Input('io_data_dropdown', 'value'),
-    Input('io_data_dropdown_2', 'value')
+    Input('io_data_dropdown_2', 'value'),
+    Input('input_mission_button', 'n_clicks'),
+    Input('input_gps_button', 'n_clicks'),
+    Input('input_rpd_roll_button', 'n_clicks'),
+    Input('input_rpd_pitch_button', 'n_clicks'),
+    Input('input_rpd_down_button', 'n_clicks'),
+    Input('input_vel_u_button', 'n_clicks'),
+    Input('input_vel_v_button', 'n_clicks'),
+    Input('input_vel_w_button', 'n_clicks'),
+    Input('input_pos_n_button', 'n_clicks'),
+    Input('input_pos_e_button', 'n_clicks'),
+    Input('input_pos_d_button', 'n_clicks')
 )
-def update_graph_data(df_header, df_header_2):
+def update_graph_data(df_header, df_header_2, 
+                      mission_clicks, gps_clicks, 
+                      rpd_roll_clicks, rpd_pitch_clicks, rpd_down_clicks, 
+                      vel_u_clicks, vel_v_clicks, vel_w_clicks, 
+                      pos_n_clicks, pos_e_clicks, pos_d_clicks):
     global df, fcMcMode_index, fcMcMode_value, fcMcMode_color
-    # figure = go.Figure()
+    global prev_mission_clicks, prev_gps_clicks
+    global prev_rpd_roll_clicks, prev_rpd_pitch_clicks, prev_rpd_down_clicks
+    global prev_vel_u_clicks, prev_vel_v_clicks, prev_vel_w_clicks
+    global prev_pos_n_clicks, prev_pos_e_clicks, prev_pos_d_clicks
+    if prev_mission_clicks != mission_clicks:
+        df_header = ['jobSeq']
+        df_header_2 = ['strJobType', 'strMissionType']
+        prev_mission_clicks = mission_clicks
+    elif prev_gps_clicks != gps_clicks:
+        df_header = ['nSat', 'gpsNSV', 'gpHealthStrength']
+        df_header_2 = ['strGpsFix']
+        prev_gps_clicks = gps_clicks
+    elif prev_rpd_roll_clicks != rpd_roll_clicks:
+        if 'rpy_0' in df.columns:
+            df_header = ['rpy_0', 'rpdCmd_0']
+        else:
+            df_header = ['RPY_deg[0]', 'rpdCmd_deg_deg_mps[0]']
+        if 'strCtrlSpType' in df.columns:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'ctrlSetpointType']
+        prev_rpd_roll_clicks = rpd_roll_clicks
+    elif prev_rpd_pitch_clicks != rpd_pitch_clicks:
+        if 'rpy_1' in df.columns:
+            df_header = ['rpy_1', 'rpdCmd_1']
+        else:
+            df_header = ['RPY_deg[1]', 'rpdCmd_deg_deg_mps[1]']
+        if 'strCtrlSpType' in df.columns:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'ctrlSetpointType']
+        prev_rpd_pitch_clicks = rpd_pitch_clicks
+    elif prev_rpd_down_clicks != rpd_down_clicks:
+        if 'velNed_2' in df.columns:
+            df_header = ['velNed_2', 'velCmdNav_2']
+        else:
+            df_header = ['velUVW_mps[2]', 'velCmdUVW_mps[2]']
+        if 'strCtrlSpType' in df.columns:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'ctrlSetpointType']
+        prev_rpd_down_clicks = rpd_down_clicks
+    elif prev_vel_u_clicks != vel_u_clicks:
+        df_header = ['velUVW_mps[0]', 'velCmdUVW_mps[0]']
+        if 'strCtrlSpType' in df.columns:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'ctrlSetpointType']
+        prev_vel_u_clicks = vel_u_clicks
+    elif prev_vel_v_clicks != vel_v_clicks:
+        df_header = ['velUVW_mps[1]', 'velCmdUVW_mps[1]']
+        if 'strCtrlSpType' in df.columns:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'ctrlSetpointType']
+        prev_vel_v_clicks = vel_v_clicks
+    elif prev_vel_w_clicks != vel_w_clicks:
+        df_header = ['velUVW_mps[2]', 'velCmdUVW_mps[2]']
+        if 'strCtrlSpType' in df.columns:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'ctrlSetpointType']
+        prev_vel_w_clicks = vel_w_clicks
+    elif prev_pos_n_clicks != pos_n_clicks:
+        if 'posNed_0' in df.columns:
+            df_header = ['posNed_0', ' posCmdNed_0']
+        else:
+            df_header = ['posNED_m[0]', 'posCmdNED_m[0]']
+        if 'strCtrlSpType' in df.columns:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'ctrlSetpointType']
+        prev_pos_n_clicks = pos_n_clicks
+    elif prev_pos_e_clicks != pos_e_clicks:
+        if 'posNed_1' in df.columns:
+            df_header = ['posNed_1', ' posCmdNed_1']
+        else:
+            df_header = ['posNED_m[1]', 'posCmdNED_m[1]']
+        if 'strCtrlSpType' in df.columns:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'ctrlSetpointType']
+        prev_pos_e_clicks = pos_e_clicks
+    elif prev_pos_d_clicks != pos_d_clicks:
+        if 'posNed_2' in df.columns:
+            df_header = ['posNed_2', ' posCmdNed_2']
+        else:
+            df_header = ['posNED_m[2]', 'posCmdNED_m[2]']
+        if 'strCtrlSpType' in df.columns:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'ctrlSetpointType']
+        prev_pos_d_clicks = pos_d_clicks
+        
     figure = make_subplots(
         rows=2,
         cols=1,
         shared_xaxes=True
     )
-    figure.update_layout(height=710,
+    figure.update_layout(height=675,
                          margin=dict(r=20, b=10, l=10, t=10))
     if len(df_header) > 0:
         if 'diffTime' in df_header:
@@ -460,7 +610,6 @@ def update_graph_data(df_header, df_header_2):
             x_title = 'dateTime'
             try:
                 for y_title in df_header:
-                    # deleteTraces, FigureWidget
                     figure.add_trace(go.Scatter(
                         x=df[x_title], y=df[y_title], name=y_title,
                         mode='lines',
@@ -471,7 +620,6 @@ def update_graph_data(df_header, df_header_2):
                 print(e)
             try:
                 for y_title in df_header_2:
-                    # deleteTraces, FigureWidget
                     figure.add_trace(go.Scatter(
                         x=df[x_title], y=df[y_title], name=y_title,
                         mode='lines',
@@ -513,7 +661,8 @@ def update_graph_data(df_header, df_header_2):
 @app.callback(
     Output("graph_go_3d_pos", "figure"),
     Output("graph_go_3d_pos", "config"),
-    [Input("output_select_data_checklist", "value")])
+    [Input("output_select_data_checklist", "value")]
+)
 def update_3d_graph_data(value):
     global df
     figure_3d = go.Figure()
@@ -531,22 +680,6 @@ def update_3d_graph_data(value):
                     x=df_jobSeq['posNed_1'],
                     y=df_jobSeq['posNed_0'],
                     z=-df_jobSeq['posNed_2'],
-                    name='Flight Path (jobSeq = ' + str(job_idx) + ')',
-                    mode='lines',
-                    line=dict(color=-df_jobSeq['rosTime'],
-                              colorscale='Viridis', width=6),
-                    text=df_jobSeq['strFcMcMode'],
-                    hovertemplate='fcMcMode: <b>%{text}</b><br>' +
-                    'X: %{x}<br>' +
-                    'Y: %{y}<br>' +
-                    'Z: %{z}'))
-        elif 'posNed_m_0' in df.columns:
-            for job_idx in df['jobSeq'].unique():
-                df_jobSeq = df[df['jobSeq'] == job_idx]
-                figure_3d.add_trace(go.Scatter3d(
-                    x=df_jobSeq['posNed_m_1'],
-                    y=df_jobSeq['posNed_m_0'],
-                    z=-df_jobSeq['posNed_m_2'],
                     name='Flight Path (jobSeq = ' + str(job_idx) + ')',
                     mode='lines',
                     line=dict(color=-df_jobSeq['rosTime'],
@@ -585,6 +718,6 @@ def update_3d_graph_data(value):
 if __name__ == '__main__':
     while(True):
         try:
-            app.run_server(debug=True, host='127.0.0.1')
+            app.run_server(debug=True, host='10.10.150.22')
         except Exception as e:
             print(e)
