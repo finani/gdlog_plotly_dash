@@ -523,6 +523,22 @@ def display_animated_graph(value):
                     'X: %{x}<br>' +
                     'Y: %{y}<br>' +
                     'Z: %{z}'))
+        elif 'posNED_m[0]' in df.columns:
+            for job_idx in df['jobSeq'].unique():
+                df_jobSeq = df[df['jobSeq'] == job_idx]
+                figure_3d.add_trace(go.Scatter3d(
+                    x=df_jobSeq['posNED_m[1]'],
+                    y=df_jobSeq['posNED_m[0]'],
+                    z=-df_jobSeq['posNED_m[2]'],
+                    name='Flight Path (jobSeq = ' + str(job_idx) + ')',
+                    mode='lines',
+                    line=dict(color=-df_jobSeq['rosTime'],
+                              colorscale='Viridis', width=6),
+                    text=df_jobSeq['strFcMcMode'],
+                    hovertemplate='fcMcMode: <b>%{text}</b><br>' +
+                    'X: %{x}<br>' +
+                    'Y: %{y}<br>' +
+                    'Z: %{z}'))
     if 'Lidar_PC' in value:
         figure_3d.add_trace(go.Scatter3d(
             x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
