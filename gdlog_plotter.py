@@ -270,11 +270,10 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                                 csv_header_list.append('pad_'+str(idx))
                                 bin_data_type = bin_data_type + 'B'
 
-                            decoded = decoded[7+FcLogHeaderSize
-                                              + FcLogTypeListSize
-                                              + FcLogDataSize:]
-                        chunk = decoded[0:len(decoded)
-                                        // bin_data_length*bin_data_length]
+                            decoded = \
+                                decoded[7+FcLogHeaderSize+FcLogTypeListSize+FcLogDataSize:]
+                        chunk = \
+                            decoded[0:len(decoded)//bin_data_length*bin_data_length]
                         data_count = 0
                         wr = csv.writer(f_csv)
                         wr.writerow(csv_header_list)
