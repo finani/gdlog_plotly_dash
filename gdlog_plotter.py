@@ -49,6 +49,9 @@ prev_vel_w_clicks = 0
 prev_pos_n_clicks = 0
 prev_pos_e_clicks = 0
 prev_pos_d_clicks = 0
+prev_slide_ranger_clicks = 0
+
+slider_ranger
 
 bin_data_length = 616
 bin_data_type = 'dBBBBBBffffffffffffBBBBBdddffffffffHBHBddddddddddddfffffffffffBBBffffffffffffffffffffffffffffffffBfBddfddfffffffffffffffffffffffffffffffffBBfffBBBB'
@@ -185,6 +188,12 @@ app.layout = html.Div([
             html.Button('pos_d', 
                         id='input_pos_d_button', 
                         n_clicks=0),
+            html.Button('slide_ranger', 
+                        id='input_slide_ranger_button', 
+                        n_clicks=0,
+                        style={
+                            'float': 'right'
+                        }),
             dcc.Graph(id='graph_go')
         ]),
         dcc.Tab(label='3D Data Plot', children=[
@@ -534,6 +543,8 @@ def update_graph_data(df_header, df_header_2,
     elif prev_rpd_down_clicks != rpd_down_clicks:
         if 'velNed_2' in df.columns:
             df_header = ['velNed_2', 'velCmdNav_2']
+        elif 'velNed_mps_2' in df.columns:
+            df_header = ['velNed_mps_2', 'velCmdNav_2']
         else:
             df_header = ['velUVW_mps[2]', 'velCmdUVW_mps[2]']
         if 'strCtrlSpType' in df.columns:
@@ -565,6 +576,8 @@ def update_graph_data(df_header, df_header_2,
     elif prev_pos_n_clicks != pos_n_clicks:
         if 'posNed_0' in df.columns:
             df_header = ['posNed_0', ' posCmdNed_0']
+        elif 'posNed_m_0' in df.columns:
+            df_header = ['posNed_m_0', ' posCmdNed_m_0']
         else:
             df_header = ['posNED_m[0]', 'posCmdNED_m[0]']
         if 'strCtrlSpType' in df.columns:
@@ -575,6 +588,8 @@ def update_graph_data(df_header, df_header_2,
     elif prev_pos_e_clicks != pos_e_clicks:
         if 'posNed_1' in df.columns:
             df_header = ['posNed_1', ' posCmdNed_1']
+        elif 'posNed_m_1' in df.columns:
+            df_header = ['posNed_m_1', ' posCmdNed_m_1']
         else:
             df_header = ['posNED_m[1]', 'posCmdNED_m[1]']
         if 'strCtrlSpType' in df.columns:
@@ -585,6 +600,8 @@ def update_graph_data(df_header, df_header_2,
     elif prev_pos_d_clicks != pos_d_clicks:
         if 'posNed_2' in df.columns:
             df_header = ['posNed_2', ' posCmdNed_2']
+        elif 'posNed_m_2' in df.columns:
+            df_header = ['posNed_m_2', ' posCmdNed_m_2']
         else:
             df_header = ['posNED_m[2]', 'posCmdNED_m[2]']
         if 'strCtrlSpType' in df.columns:
@@ -679,6 +696,22 @@ def update_3d_graph_data(value):
                     x=df_jobSeq['posNed_1'],
                     y=df_jobSeq['posNed_0'],
                     z=-df_jobSeq['posNed_2'],
+                    name='Flight Path (jobSeq = ' + str(job_idx) + ')',
+                    mode='lines',
+                    line=dict(color=-df_jobSeq['rosTime'],
+                              colorscale='Viridis', width=6),
+                    text=df_jobSeq['strFcMcMode'],
+                    hovertemplate='fcMcMode: <b>%{text}</b><br>' +
+                    'X: %{x}<br>' +
+                    'Y: %{y}<br>' +
+                    'Z: %{z}'))
+        elif 'posNED_m_0' in df.columns:
+            for job_idx in df['jobSeq'].unique():
+                df_jobSeq = df[df['jobSeq'] == job_idx]
+                figure_3d.add_trace(go.Scatter3d(
+                    x=df_jobSeq['posNED_m_1'],
+                    y=df_jobSeq['posNED_m_0'],
+                    z=-df_jobSeq['posNED_m_2'],
                     name='Flight Path (jobSeq = ' + str(job_idx) + ')',
                     mode='lines',
                     line=dict(color=-df_jobSeq['rosTime'],
