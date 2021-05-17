@@ -51,7 +51,7 @@ prev_pos_e_clicks = 0
 prev_pos_d_clicks = 0
 prev_slide_ranger_clicks = 0
 
-slider_ranger
+# slider_ranger
 
 bin_data_length = 616
 bin_data_type = 'dBBBBBBffffffffffffBBBBBdddffffffffHBHBddddddddddddfffffffffffBBBffffffffffffffffffffffffffffffffBfBddfddfffffffffffffffffffffffffffffffffBBfffBBBB'
@@ -750,6 +750,6 @@ def update_3d_graph_data(value):
 if __name__ == '__main__':
     while(True):
         try:
-            app.run_server(debug=True, host='10.10.150.22')
+            app.run_server(debug=True, host='127.0.0.1')
         except Exception as e:
             print(e)
