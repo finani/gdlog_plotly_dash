@@ -51,7 +51,7 @@ prev_pos_e_clicks = 0
 prev_pos_d_clicks = 0
 prev_slide_ranger_clicks = 0
 
-# slider_ranger
+slide_ranger_toggle = True
 
 bin_data_length = 616
 bin_data_type = 'dBBBBBBffffffffffffBBBBBdddffffffffHBHBddddddddddddfffffffffffBBBffffffffffffffffffffffffffffffffBfBddfddfffffffffffffffffffffffffffffffffBBfffBBBB'
@@ -188,7 +188,7 @@ app.layout = html.Div([
             html.Button('pos_d', 
                         id='input_pos_d_button', 
                         n_clicks=0),
-            html.Button('slide_ranger', 
+            html.Button('slide_ranger: true', 
                         id='input_slide_ranger_button', 
                         n_clicks=0,
                         style={
@@ -487,6 +487,21 @@ def update_data_upload(list_of_contents, list_of_names, list_of_dates):
 
 
 @app.callback(
+    Output('input_slide_ranger_button', 'children'),
+    Input('input_slide_ranger_button', 'children'),
+    Input('input_slide_ranger_button', 'n_clicks')
+)
+def update_graph_data(prev_slide_ranger_children, slide_ranger_clicks):
+    global prev_slide_ranger_clicks, slide_ranger_toggle
+    strSlideRanger = prev_slide_ranger_children
+
+    if prev_slide_ranger_clicks != slide_ranger_clicks:
+        slide_ranger_toggle = not slide_ranger_toggle
+        strSlideRanger = 'slide_ranger: ' + str(slide_ranger_toggle)
+        prev_slide_ranger_clicks = slide_ranger_clicks
+    return strSlideRanger
+
+@app.callback(
     Output('graph_go', 'figure'),
     Output('graph_go', 'config'),
     Input('io_data_dropdown', 'value'),
@@ -513,6 +528,7 @@ def update_graph_data(df_header, df_header_2,
     global prev_rpd_roll_clicks, prev_rpd_pitch_clicks, prev_rpd_down_clicks
     global prev_vel_u_clicks, prev_vel_v_clicks, prev_vel_w_clicks
     global prev_pos_n_clicks, prev_pos_e_clicks, prev_pos_d_clicks
+
     if prev_mission_clicks != mission_clicks:
         df_header = ['jobSeq']
         df_header_2 = ['strJobType', 'strMissionType']
@@ -658,7 +674,7 @@ def update_graph_data(df_header, df_header_2,
             figure.update_layout(
                 xaxis=dict(
                     rangeslider=dict(
-                        visible=False,
+                        visible=slide_ranger_toggle,
                         thickness=0.1
                     )
                 )
