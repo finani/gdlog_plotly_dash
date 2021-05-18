@@ -57,46 +57,49 @@ bin_data_length = 616
 bin_data_type = 'dBBBBBBffffffffffffBBBBBdddffffffffHBHBddddddddddddfffffffffffBBBffffffffffffffffffffffffffffffffBfBddfddfffffffffffffffffffffffffffffffffBBfffBBBB'
 csv_header_list = ['rosTime', 'flightMode', 'ctrlDeviceStatus',
                    'fcMcMode', 'nSat', 'gpsFix', 'jobSeq',
-                   'velNedGps_mps_0', 'velNedGps_mps_1', 'velNedGps_mps_2',
-                   'posNed_m_0', 'posNed_m_1', 'posNed_m_2',
-                   'velNed_mps_0', 'velNed_mps_1', 'velNed_mps_2',
-                   'rpy_0', 'rpy_1', 'rpy_2',
+                   'velNEDGps_mps_0', 'velNEDGps_mps_1', 'velNEDGps_mps_2',
+                   'posNED_m_0', 'posNED_m_1', 'posNED_m_2',
+                   'velNED_mps_0', 'velNED_mps_1', 'velNED_mps_2',
+                   'rpy_deg_0', 'rpy_deg_1', 'rpy_deg_2',
                    'yawSpType',
-                   'ctrlUser', 'ctrlStruct', 'ctrlSetpointType', 'ctrlOutputType',
+                   'ctrlUser', 'ctrlStruct', 'ctrlSpType', 'ctrlOpType',
                    'ctrlSp_0', 'ctrlSp_1', 'ctrlSp_2',
-                   'ctrlOp_0', 'ctrlOp_1', 'ctrlOp_2', 'yawSp',
+                   'ctrlOp_0', 'ctrlOp_1', 'ctrlOp_2', 'yawSp_deg',
                    'rcRPYT_0', 'rcRPYT_1', 'rcRPYT_2', 'rcRPYT_3',
-                   'gpsNSV', 'rtkHealthFlag', 'gpsFusedNSV', 'gpHealth',
-                   'posGPS_m_0', 'posGPS_m_1', 'posGPS_m_2',
-                   'posRTK_m_0', 'posRTK_m_1', 'posRTK_m_2',
-                   'posGpsFused_m_0', 'posGpsFused_m_1', 'posGpsFused_m_2',
-                   'posGp_m_0', 'posGp_m_1', 'posGp_m_2',
-                   'errLatMix', 'errLatVis', 'errLatLid', 'cmdLatVelIgain', 'cmdLatVelMix',
-                   'errLatMixRate', 'errLatMixCov00', 'errLatMixCov11',
-                   'vbxyz_mps_0', 'vbxyz_mps_1', 'vbxyz_mps_2',
-                   'acWarnStat', 'acHorWarnAC', 'acVerWarnAC',
-                   'acXYZRel_0', 'acXYZRel_1', 'acXYZRel_2',
-                   'acHorWarnRange', 'acHorWarnAngle', 'acVerWarnRange', 'acVerWarnAngle',
-                   'lidarDist', 'lidarAngle',
-                   'lidarRaw_0', 'lidarRaw_1', 'lidarRaw_2', 'lidarRaw_3', 'lidarRaw_4', 'lidarRaw_5', 'lidarRaw_6', 'lidarRaw_7',
-                   'velCmdLongLatHeave_mps_0', 'velCmdLongLatHeave_mps_1', 'velCmdLongLatHeave_mps_2',
-                   'velCtrlIuvw_mps_0', 'velCtrlIuvw_mps_1', 'velCtrlIuvw_mps_2',
-                   'posCtrlINED_m_0', 'posCtrlINED_m_1', 'posCtrlINED_m_2',
-                   'gimbalRPYCmd_0', 'gimbalRPYCmd_1', 'gimbalRPYCmd_2',
-                   'gimbalRPY_0', 'gimbalRPY_1', 'gimbalRPY_2',
+                   'gpsNSV', 'rtkHealthFlag', 'gpsFusedNSV', 'gpHealthStrength',
+                   'posGPS_degE7_degE7_mm_0', 'posGPS_degE7_degE7_mm_1', 'posGPS_degE7_degE7_mm_2',
+                   'posRTK_deg_deg_m_0', 'posRTK_deg_deg_m_1', 'posRTK_deg_deg_m_2',
+                   'posGpsFused_rad_rad_m_0', 'posGpsFused_rad_rad_m_1', 'posGpsFused_rad_rad_m_2',
+                   'posGP_deg_deg_m_0', 'posGP_deg_deg_m_1', 'posGP_deg_deg_m_2',
+                   'StdJobLatCtrlPIDErrLatMix', 'StdJobLatCtrlPIDErrLatVis',
+                   'StdJobLatCtrlPIDErrLatLidNorm', 'StdJobLatCtrlCmdVelLatIgain',
+                   'StdJobLatCtrlCmdVelLatMix', 'StdJobLatCtrlPIDErrLatMixRate',
+                   'StdJobLatCtrlPIDErrLatMixCov00', 'StdJobLatCtrlPIDErrLatMixCov11',
+                   'velUVW_mps_0', 'velUVW_mps_1', 'velUVW_mps_2',
+                   'AcWarnStat', 'AcHorWarnAC', 'AcVerWarnAC',
+                   'AcXYZRel_m_0', 'AcXYZRel_m_1', 'AcXYZRel_m_2',
+                   'AcHorWarnRange_m', 'AcHorWarnAngle_deg', 'AcVerWarnRange_m', 'AcVerWarnAngle_deg',
+                   'LidarDist_m', 'LidarAngle_deg',
+                   'LidarRaw_m_0', 'LidarRaw_m_1', 'LidarRaw_m_2', 'LidarRaw_m_3',
+                   'LidarRaw_m_4', 'LidarRaw_m_5', 'LidarRaw_m_6', 'LidarRaw_m_7',
+                   'llhVelCmd_1', 'llhVelCmd_0', 'llhVelCmd_2',
+                   'velCtrlHdgI_0', 'velCtrlHdgI_1', 'velCtrlHdgI_2',
+                   'posCtrlNEDI_0', 'posCtrlNEDI_1', 'posCtrlNEDI_2',
+                   'gimbalRpyCmd_deg_0', 'gimbalRpyCmd_deg_1', 'gimbalRpyCmd_deg_2',
+                   'gimbalRpy_deg_0', 'gimbalRpy_deg_1', 'gimbalRpy_deg_2',
                    'windStatus', 'windSpeed', 'windAngle', 'windQueryTime', 'windResponseTime',
                    'acousticTemp', 'tempQueryTime', 'tempResponseTime',
                    'accBody_mpss_0', 'accBody_mpss_1', 'accBody_mpss_2',
-                   'trajUnitVectorTNB0_0', 'trajUnitVectorTNB1_0', 'trajUnitVectorTNB2_0',
-                   'trajUnitVectorTNB0_1', 'trajUnitVectorTNB1_1', 'trajUnitVectorTNB2_1',
-                   'trajUnitVectorTNB0_2', 'trajUnitVectorTNB1_2', 'trajUnitVectorTNB2_2',
-                   'trajCmdTNB_0', 'trajCmdTNB_1', 'trajCmdTNB_2',
-                   'stdJobLongPidErr', 'stdJobLongPidRate', 'stdJobLongPidIgain',
-                   'guideModeLongPidErr', 'guideModeLongPidRate', 'guideModeLongPidIgain',
-                   'pqr_A_0', 'pqr_B_1', 'pqr_C_2',
-                   'rpdCmd_0', 'rpdCmd_1', 'rpdCmd_2',
-                   'velCmdNav_mps_0', 'velCmdNav_mps_1', 'velCmdNav_mps_2',
-                   'posCmdNed_m_0', 'posCmdNed_m_1', 'posCmdNed_m_2',
+                   'trajUnitVectorT_0', 'trajUnitVectorT_1', 'trajUnitVectorT_2',
+                   'trajUnitVectorN_0', 'trajUnitVectorN_1', 'trajUnitVectorN_2',
+                   'trajUnitVectorB_0', 'trajUnitVectorB_1', 'trajUnitVectorB_2',
+                   'trajVelCmdTNB_mps_0', 'trajVelCmdTNB_mps_1', 'trajVelCmdTNB_mps_2',
+                   'StdJobLongPIDErr', 'StdJobLongPIDRate', 'StdJobLongPIDIgain',
+                   'GuideModeLongPIDErr', 'GuideModeLongPIDRate', 'GuideModeLongPIDIgain',
+                   'pqr_dps_0', 'pqr_dps_1', 'pqr_dps_2',
+                   'rpdCmd_deg_deg_mps_0', 'rpdCmd_deg_deg_mps_1', 'rpdCmd_deg_deg_mps_2',
+                   'velCmdHdg_mps_0', 'velCmdHdg_mps_1', 'velCmdHdg_mps_2',
+                   'posCmdNED_m_0', 'posCmdNED_m_1', 'posCmdNED_m_2',
                    'missionType', 'jobType',
                    'bladeTravelDistance',
                    'trajTimeCur', 'trajTimeMax', 'pad_1', 'pad_2', 'pad_3', 'pad_4']
@@ -257,14 +260,14 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 elif 'bin' in filename:
                     with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
                         if chr(decoded[0]) == 'n':
-                            print("New_Format")
-                            FcLogHeaderSize = decoded[2] << 8 | decoded[1]
-                            FcLogTypeListSize = decoded[4] << 8 | decoded[3]
-                            FcLogDataSize = decoded[6] << 8 | decoded[5]
+                            print("New_Format v" + str(decoded[1]))
+                            FcLogHeaderSize = decoded[3] << 8 | decoded[2]
+                            FcLogTypeListSize = decoded[5] << 8 | decoded[4]
+                            FcLogDataSize = decoded[7] << 8 | decoded[6]
                             FcLogHeader = \
-                                decoded[7:7+FcLogHeaderSize].decode('ascii')
+                                decoded[8:8+FcLogHeaderSize].decode('ascii')
                             FcLogTypeList = \
-                                decoded[7+FcLogHeaderSize:7+FcLogHeaderSize+FcLogTypeListSize]\
+                                decoded[8+FcLogHeaderSize:8+FcLogHeaderSize+FcLogTypeListSize]\
                                 .decode('ascii')
 
                             csv_header_list = FcLogHeader.split(",")
@@ -280,7 +283,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                                 bin_data_type = bin_data_type + 'B'
 
                             decoded = \
-                                decoded[7+FcLogHeaderSize+FcLogTypeListSize+FcLogDataSize:]
+                                decoded[8+FcLogHeaderSize+FcLogTypeListSize+FcLogDataSize:]
                         chunk = \
                             decoded[0:len(decoded)//bin_data_length*bin_data_length]
                         data_count = 0
@@ -391,19 +394,6 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df.loc[df.ctrlStruct == 13, 'strCtrlStruct'] = 'TRAJ_PID0AC_ATTI_RPD'
                     df.loc[df.ctrlStruct == 14, 'strCtrlStruct'] = 'ATTI_0_ATTI'
 
-                if 'ctrlSetpointType' in df.columns:
-                    df.loc[df.ctrlSetpointType == 0, 'strCtrlSetpointType'] = 'CTRL_VECTYPE_NONE'
-                    df.loc[df.ctrlSetpointType == 1, 'strCtrlSetpointType'] = 'LLH_POS'
-                    df.loc[df.ctrlSetpointType == 2, 'strCtrlSetpointType'] = 'NEDABS_POS'
-                    df.loc[df.ctrlSetpointType == 3, 'strCtrlSetpointType'] = 'NEALTABS_POS'
-                    df.loc[df.ctrlSetpointType == 4, 'strCtrlSetpointType'] = 'NEALTREL_POS'
-                    df.loc[df.ctrlSetpointType == 5, 'strCtrlSetpointType'] = 'XYALT_POS'
-                    df.loc[df.ctrlSetpointType == 6, 'strCtrlSetpointType'] = 'XYD_POS'
-                    df.loc[df.ctrlSetpointType == 7, 'strCtrlSetpointType'] = 'NED_VEL'
-                    df.loc[df.ctrlSetpointType == 8, 'strCtrlSetpointType'] = 'UVW_VEL'
-                    df.loc[df.ctrlSetpointType == 9, 'strCtrlSetpointType'] = 'EULER_ATT'
-                    df.loc[df.ctrlSetpointType == 10, 'strCtrlSetpointType'] = 'TRAJ_VEC'
-
                 if 'ctrlSpType' in df.columns:
                     df.loc[df.ctrlSpType == 0, 'strCtrlSpType'] = 'CTRL_VECTYPE_NONE'
                     df.loc[df.ctrlSpType == 1, 'strCtrlSpType'] = 'LLH_POS'
@@ -416,19 +406,6 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df.loc[df.ctrlSpType == 8, 'strCtrlSpType'] = 'UVW_VEL'
                     df.loc[df.ctrlSpType == 9, 'strCtrlSpType'] = 'EULER_ATT'
                     df.loc[df.ctrlSpType == 10, 'strCtrlSpType'] = 'TRAJ_VEC'
-
-                if 'ctrlOutputType' in df.columns:
-                    df.loc[df.ctrlOutputType == 0, 'strCtrlOutputType'] = 'CTRL_VECTYPE_NONE'
-                    df.loc[df.ctrlOutputType == 1, 'strCtrlOutputType'] = 'LLH_POS'
-                    df.loc[df.ctrlOutputType == 2, 'strCtrlOutputType'] = 'NEDABS_POS'
-                    df.loc[df.ctrlOutputType == 3, 'strCtrlOutputType'] = 'NEALTABS_POS'
-                    df.loc[df.ctrlOutputType == 4, 'strCtrlOutputType'] = 'NEALTREL_POS'
-                    df.loc[df.ctrlOutputType == 5, 'strCtrlOutputType'] = 'XYALT_POS'
-                    df.loc[df.ctrlOutputType == 6, 'strCtrlOutputType'] = 'XYD_POS'
-                    df.loc[df.ctrlOutputType == 7, 'strCtrlOutputType'] = 'NED_VEL'
-                    df.loc[df.ctrlOutputType == 8, 'strCtrlOutputType'] = 'UVW_VEL'
-                    df.loc[df.ctrlOutputType == 9, 'strCtrlOutputType'] = 'EULER_ATT'
-                    df.loc[df.ctrlOutputType == 10, 'strCtrlOutputType'] = 'TRAJ_VEC'
 
                 if 'ctrlOpType' in df.columns:
                     df.loc[df.ctrlOpType == 0, 'strCtrlOpType'] = 'CTRL_VECTYPE_NONE'
@@ -542,93 +519,40 @@ def update_graph_data(df_header, df_header_2,
         df_header_2 = ['strGpsFix']
         prev_gps_clicks = gps_clicks
     elif prev_rpd_roll_clicks != rpd_roll_clicks:
-        if 'rpy_0' in df.columns:
-            df_header = ['rpy_0', 'rpdCmd_0']
-        else:
-            df_header = ['rpy_deg[0]', 'rpdCmd_deg_deg_mps[0]']
-        if 'strCtrlSetpointType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
-        else:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header = ['rpy_deg_0', 'rpdCmd_deg_deg_mps_0']
+        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_rpd_roll_clicks = rpd_roll_clicks
     elif prev_rpd_pitch_clicks != rpd_pitch_clicks:
-        if 'rpy_1' in df.columns:
-            df_header = ['rpy_1', 'rpdCmd_1']
-        else:
-            df_header = ['rpy_deg[1]', 'rpdCmd_deg_deg_mps[1]']
-        if 'strCtrlSetpointType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
-        else:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header = ['rpy_deg_1', 'rpdCmd_deg_deg_mps_1']
+        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_rpd_pitch_clicks = rpd_pitch_clicks
     elif prev_rpd_down_clicks != rpd_down_clicks:
-        if 'velNed_2' in df.columns:
-            df_header = ['velNed_2', 'velCmdNav_2']
-        elif 'velNed_mps_2' in df.columns:
-            df_header = ['velNed_mps_2', 'velCmdNav_2']
-        else:
-            df_header = ['velUVW_mps[2]', 'velCmdUVW_mps[2]']
-        if 'strCtrlSetpointType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
-        else:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header = ['velUVW_mps_2', 'velCmdUVW_mps_2']
+        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_rpd_down_clicks = rpd_down_clicks
     elif prev_vel_u_clicks != vel_u_clicks:
-        df_header = ['velUVW_mps[0]', 'velCmdUVW_mps[0]']
-        if 'strCtrlSetpointType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
-        else:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header = ['velUVW_mps_0', 'velCmdUVW_mps_0']
+        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_vel_u_clicks = vel_u_clicks
     elif prev_vel_v_clicks != vel_v_clicks:
-        df_header = ['velUVW_mps[1]', 'velCmdUVW_mps[1]']
-        if 'strCtrlSetpointType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
-        else:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header = ['velUVW_mps_1', 'velCmdUVW_mps_1']
+        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_vel_v_clicks = vel_v_clicks
     elif prev_vel_w_clicks != vel_w_clicks:
-        df_header = ['velUVW_mps[2]', 'velCmdUVW_mps[2]']
-        if 'strCtrlSetpointType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
-        else:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header = ['velUVW_mps_2', 'velCmdUVW_mps_2']
+        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_vel_w_clicks = vel_w_clicks
     elif prev_pos_n_clicks != pos_n_clicks:
-        if 'posNed_0' in df.columns:
-            df_header = ['posNed_0', ' posCmdNed_0']
-        elif 'posNed_m_0' in df.columns:
-            df_header = ['posNed_m_0', 'posCmdNed_m_0']
-        else:
-            df_header = ['posNED_m[0]', 'posCmdNED_m[0]']
-        if 'strCtrlSetpointType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
-        else:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header = ['posNED_m_0', 'posCmdNED_m_0']
+        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_pos_n_clicks = pos_n_clicks
     elif prev_pos_e_clicks != pos_e_clicks:
-        if 'posNed_1' in df.columns:
-            df_header = ['posNed_1', ' posCmdNed_1']
-        elif 'posNed_m_1' in df.columns:
-            df_header = ['posNed_m_1', 'posCmdNed_m_1']
-        else:
-            df_header = ['posNED_m[1]', 'posCmdNED_m[1]']
-        if 'strCtrlSetpointType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
-        else:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header = ['posNED_m_1', 'posCmdNED_m_1']
+        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_pos_e_clicks = pos_e_clicks
     elif prev_pos_d_clicks != pos_d_clicks:
-        if 'posNed_2' in df.columns:
-            df_header = ['posNed_2', ' posCmdNed_2']
-        elif 'posNed_m_2' in df.columns:
-            df_header = ['posNed_m_2', 'posCmdNed_m_2']
-        else:
-            df_header = ['posNED_m[2]', 'posCmdNED_m[2]']
-        if 'strCtrlSetpointType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
-        else:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header = ['posNED_m_2', 'posCmdNED_m_2']
+        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_pos_d_clicks = pos_d_clicks
         
     figure = make_subplots(
@@ -638,51 +562,53 @@ def update_graph_data(df_header, df_header_2,
     )
     figure.update_layout(height=675,
                          margin=dict(r=20, b=10, l=10, t=10))
-    if len(df_header) > 0:
+    x_title = 'dateTime'
+    try:
         if 'diffTime' in df_header:
             figure.add_trace(go.Histogram(x=df['diffTime']), 
-                             row=1, 
-                             col=1)
+                                row=1, 
+                                col=1)
         else:
-            x_title = 'dateTime'
-            try:
-                for y_title in df_header:
-                    figure.add_trace(go.Scatter(
-                        x=df[x_title], y=df[y_title], name=y_title,
-                        mode='lines',
-                        line=dict(width=3)), 
-                        row=1, 
-                        col=1)
-            except Exception as e:
-                print(e)
-            try:
-                for y_title in df_header_2:
-                    figure.add_trace(go.Scatter(
-                        x=df[x_title], y=df[y_title], name=y_title,
-                        mode='lines',
-                        line=dict(width=3)), 
-                        row=2, 
-                        col=1)
-            except Exception as e:
-                print(e)
-            for idx in range(len(fcMcMode_index)-1):
-                figure.add_vrect(
-                    x0=df.iloc[fcMcMode_index[idx]].dateTime,
-                    x1=df.iloc[fcMcMode_index[idx+1]].dateTime,
-                    line_width=0,
-                    annotation_text=fcMcMode_value[idx],
-                    annotation_position="top left",
-                    fillcolor=fcMcMode_color[idx],
-                    layer="below",
-                    opacity=0.2)
-            figure.update_layout(
-                xaxis=dict(
-                    rangeslider=dict(
-                        visible=slide_ranger_toggle,
-                        thickness=0.1
-                    )
-                )
+            for y_title in df_header:
+                figure.add_trace(go.Scatter(
+                    x=df[x_title], y=df[y_title], name=y_title,
+                    mode='lines',
+                    line=dict(width=3)),
+                    row=1,
+                    col=1)
+    except Exception as e:
+        print(e)
+    try:
+        for y_title in df_header_2:
+            figure.add_trace(go.Scatter(
+                x=df[x_title], y=df[y_title], name=y_title,
+                mode='lines',
+                line=dict(width=3)),
+                row=2,
+                col=1)
+    except Exception as e:
+        print(e)
+    try:
+        for idx in range(len(fcMcMode_index)-1):
+            figure.add_vrect(
+                x0=df.iloc[fcMcMode_index[idx]].dateTime,
+                x1=df.iloc[fcMcMode_index[idx+1]].dateTime,
+                line_width=0,
+                annotation_text=fcMcMode_value[idx],
+                annotation_position="top left",
+                fillcolor=fcMcMode_color[idx],
+                layer="below",
+                opacity=0.2)
+    except Exception as e:
+        print(e)
+    figure.update_layout(
+        xaxis=dict(
+            rangeslider=dict(
+                visible=slide_ranger_toggle,
+                thickness=0.1
             )
+        )
+    )
     config = dict({'displaylogo': False,
                    'scrollZoom': True,
                    'modeBarButtonsToAdd': ['drawline',
@@ -710,60 +636,33 @@ def update_3d_graph_data(value):
         height=630,
         margin=dict(r=20, b=10, l=10, t=10))
     if 'Flight_Path' in value:
-        if 'posNed_0' in df.columns:
+        try:
             for job_idx in df['jobSeq'].unique():
                 df_jobSeq = df[df['jobSeq'] == job_idx]
                 figure_3d.add_trace(go.Scatter3d(
-                    x=df_jobSeq['posNed_1'],
-                    y=df_jobSeq['posNed_0'],
-                    z=-df_jobSeq['posNed_2'],
+                    x=df_jobSeq['posNED_m_1'],
+                    y=df_jobSeq['posNED_m_0'],
+                    z=-df_jobSeq['posNED_m_2'],
                     name='Flight Path (jobSeq = ' + str(job_idx) + ')',
                     mode='lines',
                     line=dict(color=-df_jobSeq['rosTime'],
-                              colorscale='Viridis', width=6),
+                                colorscale='Viridis', width=6),
                     text=df_jobSeq['strFcMcMode'],
                     hovertemplate='fcMcMode: <b>%{text}</b><br>' +
                     'X: %{x}<br>' +
                     'Y: %{y}<br>' +
                     'Z: %{z}'))
-        elif 'posNed_m_0' in df.columns:
-            for job_idx in df['jobSeq'].unique():
-                df_jobSeq = df[df['jobSeq'] == job_idx]
-                figure_3d.add_trace(go.Scatter3d(
-                    x=df_jobSeq['posNed_m_1'],
-                    y=df_jobSeq['posNed_m_0'],
-                    z=-df_jobSeq['posNed_m_2'],
-                    name='Flight Path (jobSeq = ' + str(job_idx) + ')',
-                    mode='lines',
-                    line=dict(color=-df_jobSeq['rosTime'],
-                              colorscale='Viridis', width=6),
-                    text=df_jobSeq['strFcMcMode'],
-                    hovertemplate='fcMcMode: <b>%{text}</b><br>' +
-                    'X: %{x}<br>' +
-                    'Y: %{y}<br>' +
-                    'Z: %{z}'))
-        elif 'posNED_m[0]' in df.columns:
-            for job_idx in df['jobSeq'].unique():
-                df_jobSeq = df[df['jobSeq'] == job_idx]
-                figure_3d.add_trace(go.Scatter3d(
-                    x=df_jobSeq['posNED_m[1]'],
-                    y=df_jobSeq['posNED_m[0]'],
-                    z=-df_jobSeq['posNED_m[2]'],
-                    name='Flight Path (jobSeq = ' + str(job_idx) + ')',
-                    mode='lines',
-                    line=dict(color=-df_jobSeq['rosTime'],
-                              colorscale='Viridis', width=6),
-                    text=df_jobSeq['strFcMcMode'],
-                    hovertemplate='fcMcMode: <b>%{text}</b><br>' +
-                    'X: %{x}<br>' +
-                    'Y: %{y}<br>' +
-                    'Z: %{z}'))
+        except Exception as e:
+            print(e)
     if 'Lidar_PC' in value:
-        figure_3d.add_trace(go.Scatter3d(
-            x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
-            name='Lidar Point Cloud',
-            mode='markers',
-            marker=dict(size=3)))
+        try:
+            figure_3d.add_trace(go.Scatter3d(
+                x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
+                name='Lidar Point Cloud',
+                mode='markers',
+                marker=dict(size=3)))
+        except Exception as e:
+            print(e)
     config_3d = dict({'displaylogo': False})
     return figure_3d, config_3d
 
