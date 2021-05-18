@@ -294,6 +294,8 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                         print("data_count: " + str(data_count) +
                               ", total_time: " + str(data_count/50) + " s (50Hz)")
                         print("Saved: " + f_csv.name)
+                        parsing_log = parsing_log + 'data_count : ' + str(data_count) + \
+                                      '\ntotal_time : ' + str(data_count/50) + ' s (50Hz)\n'
                     df = pd.read_csv(filename.split('.')[0] + '.csv')
                     parsing_log = parsing_log + 'gdLog bin file!\n'
                 elif 'xls' in filename:
@@ -302,8 +304,10 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
 
                 # dataFrame Post-Processing
                 # Ignore data before 2020 January 1st Wednesday AM 1:00:00
+                df = df.drop([0]) # delete data with initial value
                 df = df[df['rosTime'] > 1577840400]
                 df = df.dropna(axis=0) # delete data with NaN
+                df = df.reset_index(drop=True)
                 df.columns = df.columns.str.strip()
                 if 'rosTime' in df.columns:
                     df['dateTime'] = pd.to_datetime(df['rosTime'], unit='s') + \
@@ -541,21 +545,21 @@ def update_graph_data(df_header, df_header_2,
         if 'rpy_0' in df.columns:
             df_header = ['rpy_0', 'rpdCmd_0']
         else:
-            df_header = ['RPY_deg[0]', 'rpdCmd_deg_deg_mps[0]']
-        if 'strCtrlSpType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
-        else:
+            df_header = ['rpy_deg[0]', 'rpdCmd_deg_deg_mps[0]']
+        if 'strCtrlSetpointType' in df.columns:
             df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_rpd_roll_clicks = rpd_roll_clicks
     elif prev_rpd_pitch_clicks != rpd_pitch_clicks:
         if 'rpy_1' in df.columns:
             df_header = ['rpy_1', 'rpdCmd_1']
         else:
-            df_header = ['RPY_deg[1]', 'rpdCmd_deg_deg_mps[1]']
-        if 'strCtrlSpType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
-        else:
+            df_header = ['rpy_deg[1]', 'rpdCmd_deg_deg_mps[1]']
+        if 'strCtrlSetpointType' in df.columns:
             df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_rpd_pitch_clicks = rpd_pitch_clicks
     elif prev_rpd_down_clicks != rpd_down_clicks:
         if 'velNed_2' in df.columns:
@@ -564,31 +568,31 @@ def update_graph_data(df_header, df_header_2,
             df_header = ['velNed_mps_2', 'velCmdNav_2']
         else:
             df_header = ['velUVW_mps[2]', 'velCmdUVW_mps[2]']
-        if 'strCtrlSpType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
-        else:
+        if 'strCtrlSetpointType' in df.columns:
             df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_rpd_down_clicks = rpd_down_clicks
     elif prev_vel_u_clicks != vel_u_clicks:
         df_header = ['velUVW_mps[0]', 'velCmdUVW_mps[0]']
-        if 'strCtrlSpType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
-        else:
+        if 'strCtrlSetpointType' in df.columns:
             df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_vel_u_clicks = vel_u_clicks
     elif prev_vel_v_clicks != vel_v_clicks:
         df_header = ['velUVW_mps[1]', 'velCmdUVW_mps[1]']
-        if 'strCtrlSpType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
-        else:
+        if 'strCtrlSetpointType' in df.columns:
             df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_vel_v_clicks = vel_v_clicks
     elif prev_vel_w_clicks != vel_w_clicks:
         df_header = ['velUVW_mps[2]', 'velCmdUVW_mps[2]']
-        if 'strCtrlSpType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
-        else:
+        if 'strCtrlSetpointType' in df.columns:
             df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_vel_w_clicks = vel_w_clicks
     elif prev_pos_n_clicks != pos_n_clicks:
         if 'posNed_0' in df.columns:
@@ -597,10 +601,10 @@ def update_graph_data(df_header, df_header_2,
             df_header = ['posNed_m_0', 'posCmdNed_m_0']
         else:
             df_header = ['posNED_m[0]', 'posCmdNED_m[0]']
-        if 'strCtrlSpType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
-        else:
+        if 'strCtrlSetpointType' in df.columns:
             df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_pos_n_clicks = pos_n_clicks
     elif prev_pos_e_clicks != pos_e_clicks:
         if 'posNed_1' in df.columns:
@@ -609,10 +613,10 @@ def update_graph_data(df_header, df_header_2,
             df_header = ['posNed_m_1', 'posCmdNed_m_1']
         else:
             df_header = ['posNED_m[1]', 'posCmdNED_m[1]']
-        if 'strCtrlSpType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
-        else:
+        if 'strCtrlSetpointType' in df.columns:
             df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_pos_e_clicks = pos_e_clicks
     elif prev_pos_d_clicks != pos_d_clicks:
         if 'posNed_2' in df.columns:
@@ -621,10 +625,10 @@ def update_graph_data(df_header, df_header_2,
             df_header = ['posNed_m_2', 'posCmdNed_m_2']
         else:
             df_header = ['posNED_m[2]', 'posCmdNED_m[2]']
-        if 'strCtrlSpType' in df.columns:
-            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
-        else:
+        if 'strCtrlSetpointType' in df.columns:
             df_header_2 = ['strCtrlStruct', 'strCtrlSetpointType']
+        else:
+            df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_pos_d_clicks = pos_d_clicks
         
     figure = make_subplots(
@@ -703,7 +707,7 @@ def update_3d_graph_data(value):
         xaxis_title='y_East',
         yaxis_title='x_North',
         zaxis_title='-z_Up'),
-        height=600,
+        height=630,
         margin=dict(r=20, b=10, l=10, t=10))
     if 'Flight_Path' in value:
         if 'posNed_0' in df.columns:
