@@ -654,11 +654,15 @@ def update_3d_graph_data(value):
                     mode='lines',
                     line=dict(color=-df_jobSeq['rosTime'],
                               colorscale='Viridis', width=6),
+                    customdata=df_jobSeq['dateTime'],
                     text=df_jobSeq['strFcMcMode'],
-                    hovertemplate='fcMcMode: <b>%{text}</b><br>' +
-                    'X: %{x}<br>' +
-                    'Y: %{y}<br>' +
-                    'Z: %{z}'))
+                    hovertemplate=
+                        'fcMcMode: <b>%{text}</b><br>' +
+                        'X: %{x}<br>' +
+                        'Y: %{y}<br>' +
+                        'Z: %{z}<br>' +
+                        'Time: %{customdata}'
+                ))
         except Exception as e:
             print(e)
     if 'Lidar_PC' in value:
