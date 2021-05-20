@@ -437,14 +437,15 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
     return confirm_msg, df_header_list_sorted
 
 
-@app.callback(Output('io_data_dropdown', 'options'),
-              Output('io_data_dropdown_2', 'options'),
-              Output('confirm', 'displayed'),
-              Output('confirm', 'message'),
-              Input('input_upload_data', 'contents'),
-              State('input_upload_data', 'filename'),
-              State('input_upload_data', 'last_modified')
-              )
+@app.callback(
+    Output('io_data_dropdown', 'options'),
+    Output('io_data_dropdown_2', 'options'),
+    Output('confirm', 'displayed'),
+    Output('confirm', 'message'),
+    Input('input_upload_data', 'contents'),
+    State('input_upload_data', 'filename'),
+    State('input_upload_data', 'last_modified')
+)
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
     global df
     if list_of_contents is not None:
@@ -636,8 +637,8 @@ def update_3d_graph_data(value):
                     mode='lines',
                     line=dict(color=-df_jobSeq['rosTime'],
                               colorscale='Viridis', width=6),
-                    customdata=df_jobSeq['dateTime'],
                     text=df_jobSeq['strFcMcMode'],
+                    customdata=df_jobSeq['dateTime'],
                     hovertemplate=
                         'fcMcMode: <b>%{text}</b><br>' +
                         'X: %{x}<br>' +
