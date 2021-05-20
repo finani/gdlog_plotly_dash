@@ -10,6 +10,10 @@
 
 ```python3 gdlog_plotter.py```
 
+or
+
+```python3 gdlog_single_plotter.py```
+
 3. Open the web browser
 
 ```127.0.0.1:8050```
