@@ -208,18 +208,6 @@ app.layout = html.Div([
                 labelStyle={'display': 'inline-block'}
             ),
             dcc.Graph(id='graph_go_3d_pos')
-        ]),
-        dcc.Tab(label='Reserved', children=[
-            dcc.Graph(
-                figure={
-                    'data': [
-                        {'x': [1, 2, 3], 'y': [2, 4, 3],
-                            'type': 'bar', 'name': 'SF'},
-                        {'x': [1, 2, 3], 'y': [5, 4, 3],
-                            'type': 'bar', 'name': 'Montreal'}
-                    ]
-                }
-            )
         ])
     ])
 ])
@@ -516,49 +504,48 @@ def update_graph_data(df_header, df_header_2,
         df_header_2 = ['strJobType', 'strMissionType']
         prev_mission_clicks = mission_clicks
     elif prev_gps_clicks != gps_clicks:
-        df_header = ['nSat', 'gpsNSV', 'gpHealthStrength']
+        df_header = ['nSat', 'gpsNSV']
         df_header_2 = ['strGpsFix']
         prev_gps_clicks = gps_clicks
     elif prev_rpd_roll_clicks != rpd_roll_clicks:
         df_header = ['rpy_deg_0', 'rpdCmd_deg_deg_mps_0']
-        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header_2 = ['strCtrlStruct']
         prev_rpd_roll_clicks = rpd_roll_clicks
     elif prev_rpd_pitch_clicks != rpd_pitch_clicks:
         df_header = ['rpy_deg_1', 'rpdCmd_deg_deg_mps_1']
-        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header_2 = ['strCtrlStruct']
         prev_rpd_pitch_clicks = rpd_pitch_clicks
     elif prev_rpd_down_clicks != rpd_down_clicks:
         df_header = ['velUVW_mps_2', 'velCmdUVW_mps_2']
-        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header_2 = ['strCtrlStruct']
         prev_rpd_down_clicks = rpd_down_clicks
     elif prev_vel_u_clicks != vel_u_clicks:
         df_header = ['velUVW_mps_0', 'velCmdUVW_mps_0']
-        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header_2 = ['strCtrlStruct']
         prev_vel_u_clicks = vel_u_clicks
     elif prev_vel_v_clicks != vel_v_clicks:
         df_header = ['velUVW_mps_1', 'velCmdUVW_mps_1']
-        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header_2 = ['strCtrlStruct']
         prev_vel_v_clicks = vel_v_clicks
     elif prev_vel_w_clicks != vel_w_clicks:
         df_header = ['velUVW_mps_2', 'velCmdUVW_mps_2']
-        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header_2 = ['strCtrlStruct']
         prev_vel_w_clicks = vel_w_clicks
     elif prev_pos_n_clicks != pos_n_clicks:
         df_header = ['posNED_m_0', 'posCmdNED_m_0']
-        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header_2 = ['strCtrlStruct']
         prev_pos_n_clicks = pos_n_clicks
     elif prev_pos_e_clicks != pos_e_clicks:
         df_header = ['posNED_m_1', 'posCmdNED_m_1']
-        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header_2 = ['strCtrlStruct']
         prev_pos_e_clicks = pos_e_clicks
     elif prev_pos_d_clicks != pos_d_clicks:
         df_header = ['posNED_m_2', 'posCmdNED_m_2']
-        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        df_header_2 = ['strCtrlStruct']
         prev_pos_d_clicks = pos_d_clicks
 
     figure = make_subplots(
-        rows=2,
-        cols=1,
+        specs=[[{"secondary_y": True}]],
         shared_xaxes=True
     )
     figure.update_layout(height=675,
@@ -566,9 +553,7 @@ def update_graph_data(df_header, df_header_2,
     x_title = 'dateTime'
     try:
         if 'diffTime' in df_header:
-            figure.add_trace(go.Histogram(x=df['diffTime']),
-                                row=1,
-                                col=1)
+            figure.add_trace(go.Histogram(x=df['diffTime']))
             config = dict({'displaylogo': False})
             return figure, config
         else:
@@ -577,8 +562,7 @@ def update_graph_data(df_header, df_header_2,
                     x=df[x_title], y=df[y_title], name=y_title,
                     mode='lines',
                     line=dict(width=3)),
-                    row=1,
-                    col=1
+                    secondary_y=False
                 )
     except Exception as e:
         print(e)
@@ -588,12 +572,16 @@ def update_graph_data(df_header, df_header_2,
                 x=df[x_title], y=df[y_title], name=y_title,
                 mode='lines',
                 line=dict(width=3)),
-                row=2,
-                col=1
+                secondary_y=True
             )
     except Exception as e:
         print(e)
     try:
+        plot_secondary_y = False
+        if (df_header is None) or (len(df_header) == 0):
+            plot_secondary_y = True
+        elif (df_header_2 is None) or (len(df_header_2) == 0):
+            plot_secondary_y = False
         for idx in range(len(fcMcMode_index)-1):
             figure.add_vrect(
                 x0=df.iloc[fcMcMode_index[idx]].dateTime,
@@ -603,7 +591,8 @@ def update_graph_data(df_header, df_header_2,
                 annotation_position="top left",
                 fillcolor=fcMcMode_color[idx],
                 layer="below",
-                opacity=0.2
+                opacity=0.2,
+                secondary_y=plot_secondary_y
             )
     except Exception as e:
         print(e)
@@ -616,14 +605,7 @@ def update_graph_data(df_header, df_header_2,
         )
     )
     config = dict({'displaylogo': False,
-                   'scrollZoom': True,
-                   'modeBarButtonsToAdd': ['drawline',
-                                           'drawopenpath',
-                                           'drawclosedpath',
-                                           'drawcircle',
-                                           'drawrect',
-                                           'eraseshape'
-                                           ]
+                   'scrollZoom': True
                    })
     return figure, config
 
