@@ -317,6 +317,40 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                         pd.DateOffset(hours=9)
                     df['diffTime'] = df['rosTime'].diff()
 
+                if 'rpy_deg_0' in df.columns:
+                    df['unitVectorN_0'] = np.cos(np.deg2rad(df['rpy_deg_1'])) * np.cos(np.deg2rad(df['rpy_deg_2']))
+                    df['unitVectorN_1'] = np.cos(np.deg2rad(df['rpy_deg_1'])) * np.sin(np.deg2rad(df['rpy_deg_2']))
+                    df['unitVectorN_2'] = -np.sin(np.deg2rad(df['rpy_deg_1']))
+
+                    df['unitVectorE_0'] = np.sin(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_1'])) * np.cos(np.deg2rad(df['rpy_deg_2'])) \
+                                            - np.cos(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_2']))
+                    df['unitVectorE_1'] = np.sin(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_1'])) * np.sin(np.deg2rad(df['rpy_deg_2'])) \
+                                            + np.cos(np.deg2rad(df['rpy_deg_0'])) * np.cos(np.deg2rad(df['rpy_deg_2']))
+                    df['unitVectorE_2'] = np.sin(np.deg2rad(df['rpy_deg_0'])) * np.cos(np.deg2rad(df['rpy_deg_1']))
+
+                    df['unitVectorD_0'] = np.cos(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_1'])) * np.cos(np.deg2rad(df['rpy_deg_2'])) \
+                                            - np.sin(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_2']))
+                    df['unitVectorD_1'] = np.cos(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_1'])) * np.sin(np.deg2rad(df['rpy_deg_2'])) \
+                                            + np.sin(np.deg2rad(df['rpy_deg_0'])) * np.cos(np.deg2rad(df['rpy_deg_2']))
+                    df['unitVectorD_2'] = np.cos(np.deg2rad(df['rpy_deg_0'])) * np.cos(np.deg2rad(df['rpy_deg_1']))
+
+                if 'gimbalRpy_deg_0' in df.columns:
+                    df['gimbalUnitVectorN_0'] = np.cos(np.deg2rad(df['gimbalRpy_deg_1'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_2']))
+                    df['gimbalUnitVectorN_1'] = np.cos(np.deg2rad(df['gimbalRpy_deg_1'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_2']))
+                    df['gimbalUnitVectorN_2'] = -np.sin(np.deg2rad(df['gimbalRpy_deg_1']))
+
+                    df['gimbalUnitVectorE_0'] = np.sin(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_1'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_2'])) \
+                                            - np.cos(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_2']))
+                    df['gimbalUnitVectorE_1'] = np.sin(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_1'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_2'])) \
+                                            + np.cos(np.deg2rad(df['gimbalRpy_deg_0'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_2']))
+                    df['gimbalUnitVectorE_2'] = np.sin(np.deg2rad(df['gimbalRpy_deg_0'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_1']))
+
+                    df['gimbalUnitVectorD_0'] = np.cos(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_1'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_2'])) \
+                                            - np.sin(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_2']))
+                    df['gimbalUnitVectorD_1'] = np.cos(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_1'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_2'])) \
+                                            + np.sin(np.deg2rad(df['gimbalRpy_deg_0'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_2']))
+                    df['gimbalUnitVectorD_2'] = np.cos(np.deg2rad(df['gimbalRpy_deg_0'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_1']))
+
                 if 'fcMcMode' in df.columns:
                     df.loc[df.fcMcMode == 0, 'strFcMcMode'] = 'RC'
                     df.loc[df.fcMcMode == 1, 'strFcMcMode'] = 'Guide'
@@ -464,7 +498,7 @@ def update_data_upload(list_of_contents, list_of_names, list_of_dates):
         confirm_msg, df_header_list_sorted = \
             parse_contents(list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
-                   for df_header in df_header_list_sorted]
+                   for df_header in df_header_list_sorted]  # df..? df_header_list_sorted..?
         return options, options, True, confirm_msg
 
 
@@ -629,21 +663,112 @@ def update_graph_data(df_header, df_header_2,
     return figure, config
 
 
+def make_plots_per_one_frame(df, idx):
+    frame = []
+
+    # Drone Axes
+    scatter3d_drone_E = go.Scatter3d(
+        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+5*df['unitVectorE_1'][idx]], 
+        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+5*df['unitVectorE_0'][idx]],
+        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-5*df['unitVectorE_2'][idx]],
+        name='frame_drone_E',
+        mode='lines',
+        line=dict(color="red", width=10)
+    )
+    scatter3d_drone_N = go.Scatter3d(
+        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+5*df['unitVectorN_1'][idx]], 
+        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+5*df['unitVectorN_0'][idx]],
+        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-5*df['unitVectorN_2'][idx]],
+        name='frame_drone_N',
+        mode='lines',
+        line=dict(color="green", width=10)
+    )
+    scatter3d_drone_U = go.Scatter3d(
+        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]-5*df['unitVectorD_1'][idx]], 
+        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]-5*df['unitVectorD_0'][idx]],
+        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]+5*df['unitVectorD_2'][idx]],
+        name='frame_drone_U',
+        mode='lines',
+        line=dict(color="blue", width=10)
+    )
+
+    frame.append(scatter3d_drone_E)
+    frame.append(scatter3d_drone_N)
+    frame.append(scatter3d_drone_U)
+    return frame
+
+
+def make_frames(df, step_size):
+    frames = []
+    for idx in range(0, len(df), step_size):
+        cur_frame_plots = make_plots_per_one_frame(df, idx)
+        frames.append(go.Frame(data=cur_frame_plots,
+                               name='{}'.format(idx)
+                               ))
+    return frames
+
+
 @app.callback(
     Output("graph_go_3d_pos", "figure"),
     Output("graph_go_3d_pos", "config"),
     [Input("output_select_data_checklist", "value")]
 )
-def update_3d_graph_data(value):
+def update_3d_graph_data(plot_data_value):
     global df
-    figure_3d = go.Figure()
-    figure_3d.update_layout(scene=dict(
-        xaxis_title='y_East',
-        yaxis_title='x_North',
-        zaxis_title='-z_Up'),
-        height=630,
-        margin=dict(r=20, b=10, l=10, t=10))
-    if 'Flight_Path' in value:
+    step_size = 100
+
+    steps = [dict(method='animate',
+                  args=[["{}".format(k*step_size)],
+                        dict(mode='immediate',
+                             frame=dict(duration=300),
+                             transition=dict(duration=0)
+                             )
+                        ],
+                  label="{}".format(k*step_size)
+                  ) for k in range(len(df)//step_size)]
+    sliders = [dict(
+        x=0.1,
+        y=0,
+        len=0.9,
+        pad=dict(b=10, t=50),
+        active=0,
+        steps=steps,
+        currentvalue=dict(font=dict(size=20), prefix="",
+                          visible=True, xanchor='right'),
+        transition=dict(easing="cubic-in-out", duration=300))
+    ]
+    updatemenus = [dict(
+        type="buttons",
+        buttons=[dict(label="Play",
+                      method="animate",
+                      args=[None, dict(frame=dict(duration=100),
+                                       fromcurrent=True)]),
+                 dict(label="Pause",
+                      method="animate",
+                      args=[[None], dict(frame=dict(duration=100),
+                                         mode='immediate')])
+                 ])]
+
+    try:
+        figure_3d = go.Figure(data=make_plots_per_one_frame(df, 0),
+                        layout=go.Layout(scene=dict(
+                            xaxis=dict(range=[df['posNED_m_1'].min()-5, df['posNED_m_1'].max()+5], tickmode='linear', tick0=0, dtick=5),
+                            yaxis=dict(range=[df['posNED_m_0'].min()-5, df['posNED_m_0'].max()+5], tickmode='linear', tick0=0, dtick=5),
+                            zaxis=dict(range=[-df['posNED_m_2'].max()-5, -df['posNED_m_2'].min()+5], tickmode='linear', tick0=0, dtick=5),
+                            xaxis_title='y_East',
+                            yaxis_title='x_North',
+                            zaxis_title='-z_Up'),
+                            height=630,
+                            margin=dict(r=20, b=10, l=10, t=10),
+                            sliders=sliders,
+                            updatemenus=updatemenus,
+                            ),
+                        frames=make_frames(df, step_size)
+                        )
+    except Exception as e:
+        print(e)
+
+    if 'Flight_Path' in plot_data_value:
         try:
             for job_idx in df['jobSeq'].unique():
                 df_jobSeq = df[df['jobSeq'] == job_idx]
@@ -666,7 +791,7 @@ def update_3d_graph_data(value):
                 ))
         except Exception as e:
             print(e)
-    if 'Lidar_PC' in value:
+    if 'Lidar_PC' in plot_data_value:
         try:
             figure_3d.add_trace(go.Scatter3d(
                 x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
