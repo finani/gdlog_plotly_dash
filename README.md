@@ -10,9 +10,9 @@
 
 ```python3 gdlog_plotter.py```
 
-or
-
 ```python3 gdlog_single_plotter.py```
+
+```python3 general_plotter.py```
 
 3. Open the web browser
 
