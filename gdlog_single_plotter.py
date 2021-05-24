@@ -49,6 +49,7 @@ prev_vel_w_clicks = 0
 prev_pos_n_clicks = 0
 prev_pos_e_clicks = 0
 prev_pos_d_clicks = 0
+prev_submit_clicks = 0
 prev_slide_ranger_clicks = 0
 
 slide_ranger_toggle = True
@@ -107,7 +108,7 @@ csv_header_list = ['rosTime', 'flightMode', 'ctrlDeviceStatus',
 app.layout = html.Div([
     html.Div([
         dcc.ConfirmDialog(
-            id='confirm',
+            id='confirm_parsing_data',
         ),
         dcc.Upload(
             id='input_upload_data',
@@ -433,15 +434,17 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 'There was an error processing this file.'
             ])
         confirm_msg = '[Parsing Log]\n' + parsing_log + \
-            '\n[File Names]\n' + strNames + '\n[Raw Contents]\n' + strDecoded
+                      '\n[File Names]\n' + strNames + \
+                      '\n[Raw Contents]\n' + strDecoded + \
+                      '\n[Do you want to use only the Guide/Auto Data?]\n'
     return confirm_msg, df_header_list_sorted
 
 
 @app.callback(
     Output('io_data_dropdown', 'options'),
     Output('io_data_dropdown_2', 'options'),
-    Output('confirm', 'displayed'),
-    Output('confirm', 'message'),
+    Output('confirm_parsing_data', 'displayed'),
+    Output('confirm_parsing_data', 'message'),
     Input('input_upload_data', 'contents'),
     State('input_upload_data', 'filename'),
     State('input_upload_data', 'last_modified')
@@ -454,6 +457,35 @@ def update_data_upload(list_of_contents, list_of_names, list_of_dates):
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
         return options, options, True, confirm_msg
+
+
+@app.callback(
+    Output('confirm_parsing_data', 'cancel_n_clicks'),  # dummy output
+    Input('confirm_parsing_data', 'submit_n_clicks')
+)
+def update_df_data(submit_clicks):
+    global df, fcMcMode_index, fcMcMode_value, fcMcMode_color
+    global prev_submit_clicks
+
+    if submit_clicks != prev_submit_clicks:
+        for idx in range(len(fcMcMode_index)-1):
+            if fcMcMode_value[idx] == 'Guide':
+                cut_begin_idx = idx
+                cut_begin = fcMcMode_index[idx]
+                break
+        for idx in reversed(range(len(fcMcMode_index)-1)):
+            if fcMcMode_value[idx] == 'Guide':
+                cut_end_idx = idx
+                cut_end = fcMcMode_index[idx]
+                break
+        df = df[cut_begin:cut_end]
+        df = df.reset_index(drop=True)
+        fcMcMode_index = fcMcMode_index[cut_begin_idx:cut_end_idx] - fcMcMode_index[cut_begin_idx]
+        fcMcMode_value = fcMcMode_value[cut_begin_idx:cut_end_idx]
+        fcMcMode_color = fcMcMode_color[cut_begin_idx:cut_end_idx]
+        
+        prev_submit_clicks = submit_clicks
+    return 0
 
 
 @app.callback(

@@ -49,6 +49,7 @@ prev_vel_w_clicks = 0
 prev_pos_n_clicks = 0
 prev_pos_e_clicks = 0
 prev_pos_d_clicks = 0
+prev_submit_clicks = 0
 prev_slide_ranger_clicks = 0
 
 slide_ranger_toggle = True
@@ -107,7 +108,7 @@ csv_header_list = ['rosTime', 'flightMode', 'ctrlDeviceStatus',
 app.layout = html.Div([
     html.Div([
         dcc.ConfirmDialog(
-            id='confirm',
+            id='confirm_parsing_data',
         ),
         dcc.Upload(
             id='input_upload_data',
@@ -335,21 +336,83 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df['unitVectorD_2'] = np.cos(np.deg2rad(df['rpy_deg_0'])) * np.cos(np.deg2rad(df['rpy_deg_1']))
 
                 if 'gimbalRpy_deg_0' in df.columns:
-                    df['gimbalUnitVectorN_0'] = np.cos(np.deg2rad(df['gimbalRpy_deg_1'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_2']))
-                    df['gimbalUnitVectorN_1'] = np.cos(np.deg2rad(df['gimbalRpy_deg_1'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_2']))
-                    df['gimbalUnitVectorN_2'] = -np.sin(np.deg2rad(df['gimbalRpy_deg_1']))
+                    sin_gimbal_roll = np.sin(np.deg2rad(df['gimbalRpy_deg_0']))
+                    cos_gimbal_roll = np.cos(np.deg2rad(df['gimbalRpy_deg_0']))
+                    sin_gimbal_pitch = np.sin(np.deg2rad(df['gimbalRpy_deg_1']))
+                    cos_gimbal_pitch = np.cos(np.deg2rad(df['gimbalRpy_deg_1']))
+                    sin_gimbal_yaw = np.sin(np.deg2rad(df['gimbalRpy_deg_2']))
+                    cos_gimbal_yaw = np.cos(np.deg2rad(df['gimbalRpy_deg_2']))
 
-                    df['gimbalUnitVectorE_0'] = np.sin(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_1'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_2'])) \
-                                            - np.cos(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_2']))
-                    df['gimbalUnitVectorE_1'] = np.sin(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_1'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_2'])) \
-                                            + np.cos(np.deg2rad(df['gimbalRpy_deg_0'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_2']))
-                    df['gimbalUnitVectorE_2'] = np.sin(np.deg2rad(df['gimbalRpy_deg_0'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_1']))
+                    df['gimbalRotationMatrix_00'] = cos_gimbal_pitch*cos_gimbal_yaw
+                    df['gimbalRotationMatrix_01'] = sin_gimbal_roll*sin_gimbal_pitch*cos_gimbal_yaw - cos_gimbal_roll*sin_gimbal_yaw
+                    df['gimbalRotationMatrix_02'] = cos_gimbal_roll*sin_gimbal_pitch*cos_gimbal_yaw - sin_gimbal_roll*sin_gimbal_yaw
+                    df['gimbalRotationMatrix_10'] = cos_gimbal_pitch*sin_gimbal_yaw
+                    df['gimbalRotationMatrix_11'] = sin_gimbal_roll*sin_gimbal_pitch*sin_gimbal_yaw + cos_gimbal_roll*cos_gimbal_yaw
+                    df['gimbalRotationMatrix_12'] = cos_gimbal_roll*sin_gimbal_pitch*sin_gimbal_yaw + sin_gimbal_roll*cos_gimbal_yaw
+                    df['gimbalRotationMatrix_20'] = -sin_gimbal_pitch
+                    df['gimbalRotationMatrix_21'] = sin_gimbal_roll*cos_gimbal_pitch
+                    df['gimbalRotationMatrix_22'] = cos_gimbal_roll*cos_gimbal_pitch
 
-                    df['gimbalUnitVectorD_0'] = np.cos(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_1'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_2'])) \
-                                            - np.sin(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_2']))
-                    df['gimbalUnitVectorD_1'] = np.cos(np.deg2rad(df['gimbalRpy_deg_0'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_1'])) * np.sin(np.deg2rad(df['gimbalRpy_deg_2'])) \
-                                            + np.sin(np.deg2rad(df['gimbalRpy_deg_0'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_2']))
-                    df['gimbalUnitVectorD_2'] = np.cos(np.deg2rad(df['gimbalRpy_deg_0'])) * np.cos(np.deg2rad(df['gimbalRpy_deg_1']))
+                    df['gimbalUnitVectorN_0'] = df['gimbalRotationMatrix_00']
+                    df['gimbalUnitVectorN_1'] = df['gimbalRotationMatrix_10']
+                    df['gimbalUnitVectorN_2'] = df['gimbalRotationMatrix_20']
+
+                    df['gimbalUnitVectorE_0'] = df['gimbalRotationMatrix_01']
+                    df['gimbalUnitVectorE_1'] = df['gimbalRotationMatrix_11']
+                    df['gimbalUnitVectorE_2'] = df['gimbalRotationMatrix_21']
+
+                    df['gimbalUnitVectorD_0'] = df['gimbalRotationMatrix_02']
+                    df['gimbalUnitVectorD_1'] = df['gimbalRotationMatrix_12']
+                    df['gimbalUnitVectorD_2'] = df['gimbalRotationMatrix_22']
+
+                    sin_hfov = np.sin(np.deg2rad(4.23/2))
+                    cos_hfov = np.cos(np.deg2rad(4.23/2))
+                    sin_vfov = np.sin(np.deg2rad(3.17/2))
+                    cos_vfov = np.cos(np.deg2rad(3.17/2))
+
+                    # R_gimbal = np.array([[cos_vfov*cos_hfov, sin_hfov, sin_vfov*cos_hfov],
+                    #                      [cos_vfov*sin_hfov, cos_hfov, sin_vfov*sin_hfov],
+                    #                      [-sin_vfov,         0,        cos_vfov]])
+
+                    df['gimbalUnitVectorUL_0'] = df['gimbalRotationMatrix_00'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_01'] * cos_vfov*-sin_hfov + \
+                                                 df['gimbalRotationMatrix_02'] * -sin_vfov
+                    df['gimbalUnitVectorUL_1'] = df['gimbalRotationMatrix_10'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_11'] * cos_vfov*-sin_hfov + \
+                                                 df['gimbalRotationMatrix_12'] * -sin_vfov
+                    df['gimbalUnitVectorUL_2'] = df['gimbalRotationMatrix_20'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_21'] * cos_vfov*-sin_hfov + \
+                                                 df['gimbalRotationMatrix_22'] * -sin_vfov
+
+                    df['gimbalUnitVectorUR_0'] = df['gimbalRotationMatrix_00'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_01'] * cos_vfov*sin_hfov + \
+                                                 df['gimbalRotationMatrix_02'] * -sin_vfov
+                    df['gimbalUnitVectorUR_1'] = df['gimbalRotationMatrix_10'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_11'] * cos_vfov*sin_hfov + \
+                                                 df['gimbalRotationMatrix_12'] * -sin_vfov
+                    df['gimbalUnitVectorUR_2'] = df['gimbalRotationMatrix_20'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_21'] * cos_vfov*sin_hfov + \
+                                                 df['gimbalRotationMatrix_22'] * -sin_vfov
+
+                    df['gimbalUnitVectorBL_0'] = df['gimbalRotationMatrix_00'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_01'] * cos_vfov*-sin_hfov + \
+                                                 df['gimbalRotationMatrix_02'] * sin_vfov
+                    df['gimbalUnitVectorBL_1'] = df['gimbalRotationMatrix_10'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_11'] * cos_vfov*-sin_hfov + \
+                                                 df['gimbalRotationMatrix_12'] * sin_vfov
+                    df['gimbalUnitVectorBL_2'] = df['gimbalRotationMatrix_20'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_21'] * cos_vfov*-sin_hfov + \
+                                                 df['gimbalRotationMatrix_22'] * sin_vfov
+
+                    df['gimbalUnitVectorBR_0'] = df['gimbalRotationMatrix_00'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_01'] * cos_vfov*sin_hfov + \
+                                                 df['gimbalRotationMatrix_02'] * sin_vfov
+                    df['gimbalUnitVectorBR_1'] = df['gimbalRotationMatrix_10'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_11'] * cos_vfov*sin_hfov + \
+                                                 df['gimbalRotationMatrix_12'] * sin_vfov
+                    df['gimbalUnitVectorBR_2'] = df['gimbalRotationMatrix_20'] * cos_vfov*cos_hfov + \
+                                                 df['gimbalRotationMatrix_21'] * cos_vfov*sin_hfov + \
+                                                 df['gimbalRotationMatrix_22'] * sin_vfov
 
                 if 'fcMcMode' in df.columns:
                     df.loc[df.fcMcMode == 0, 'strFcMcMode'] = 'RC'
@@ -479,15 +542,17 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 'There was an error processing this file.'
             ])
         confirm_msg = '[Parsing Log]\n' + parsing_log + \
-            '\n[File Names]\n' + strNames + '\n[Raw Contents]\n' + strDecoded
+                      '\n[File Names]\n' + strNames + \
+                      '\n[Raw Contents]\n' + strDecoded + \
+                      '\n[Do you want to use only the Guide/Auto Data?]\n'
     return confirm_msg, df_header_list_sorted
 
 
 @app.callback(
     Output('io_data_dropdown', 'options'),
     Output('io_data_dropdown_2', 'options'),
-    Output('confirm', 'displayed'),
-    Output('confirm', 'message'),
+    Output('confirm_parsing_data', 'displayed'),
+    Output('confirm_parsing_data', 'message'),
     Input('input_upload_data', 'contents'),
     State('input_upload_data', 'filename'),
     State('input_upload_data', 'last_modified')
@@ -498,8 +563,37 @@ def update_data_upload(list_of_contents, list_of_names, list_of_dates):
         confirm_msg, df_header_list_sorted = \
             parse_contents(list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
-                   for df_header in df_header_list_sorted]  # df..? df_header_list_sorted..?
+                   for df_header in df_header_list_sorted]
         return options, options, True, confirm_msg
+
+
+@app.callback(
+    Output('confirm_parsing_data', 'cancel_n_clicks'),  # dummy output
+    Input('confirm_parsing_data', 'submit_n_clicks')
+)
+def update_df_data(submit_clicks):
+    global df, fcMcMode_index, fcMcMode_value, fcMcMode_color
+    global prev_submit_clicks
+
+    if submit_clicks != prev_submit_clicks:
+        for idx in range(len(fcMcMode_index)-1):
+            if fcMcMode_value[idx] == 'Guide':
+                cut_begin_idx = idx
+                cut_begin = fcMcMode_index[idx]
+                break
+        for idx in reversed(range(len(fcMcMode_index)-1)):
+            if fcMcMode_value[idx] == 'Guide':
+                cut_end_idx = idx
+                cut_end = fcMcMode_index[idx]
+                break
+        df = df[cut_begin:cut_end]
+        df = df.reset_index(drop=True)
+        fcMcMode_index = fcMcMode_index[cut_begin_idx:cut_end_idx] - fcMcMode_index[cut_begin_idx]
+        fcMcMode_value = fcMcMode_value[cut_begin_idx:cut_end_idx]
+        fcMcMode_color = fcMcMode_color[cut_begin_idx:cut_end_idx]
+        
+        prev_submit_clicks = submit_clicks
+    return 0
 
 
 @app.callback(
@@ -665,36 +759,120 @@ def update_graph_data(df_header, df_header_2,
 
 def make_plots_per_one_frame(df, idx):
     frame = []
+    axes_length = 5
+    camera_ray_length = 10
 
     # Drone Axes
     scatter3d_drone_E = go.Scatter3d(
-        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+5*df['unitVectorE_1'][idx]], 
-        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+5*df['unitVectorE_0'][idx]],
-        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-5*df['unitVectorE_2'][idx]],
+        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+axes_length*df['unitVectorE_1'][idx]],
+        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+axes_length*df['unitVectorE_0'][idx]],
+        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-axes_length*df['unitVectorE_2'][idx]],
         name='frame_drone_E',
         mode='lines',
         line=dict(color="red", width=10)
     )
     scatter3d_drone_N = go.Scatter3d(
-        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+5*df['unitVectorN_1'][idx]], 
-        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+5*df['unitVectorN_0'][idx]],
-        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-5*df['unitVectorN_2'][idx]],
+        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+axes_length*df['unitVectorN_1'][idx]],
+        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+axes_length*df['unitVectorN_0'][idx]],
+        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-axes_length*df['unitVectorN_2'][idx]],
         name='frame_drone_N',
         mode='lines',
         line=dict(color="green", width=10)
     )
     scatter3d_drone_U = go.Scatter3d(
-        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]-5*df['unitVectorD_1'][idx]], 
-        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]-5*df['unitVectorD_0'][idx]],
-        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]+5*df['unitVectorD_2'][idx]],
+        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]-axes_length*df['unitVectorD_1'][idx]],
+        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]-axes_length*df['unitVectorD_0'][idx]],
+        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]+axes_length*df['unitVectorD_2'][idx]],
         name='frame_drone_U',
         mode='lines',
         line=dict(color="blue", width=10)
     )
 
+    # Camera Axes
+    scatter3d_camera_E = go.Scatter3d(
+        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+axes_length*df['gimbalUnitVectorE_1'][idx]],
+        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+axes_length*df['gimbalUnitVectorE_0'][idx]],
+        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-axes_length*df['gimbalUnitVectorE_2'][idx]],
+        name='frame_camera_E',
+        mode='lines',
+        line=dict(color="cyan", width=8)
+    )
+    scatter3d_camera_N = go.Scatter3d(
+        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+axes_length*df['gimbalUnitVectorN_1'][idx]],
+        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+axes_length*df['gimbalUnitVectorN_0'][idx]],
+        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-axes_length*df['gimbalUnitVectorN_2'][idx]],
+        name='frame_camera_N',
+        mode='lines',
+        line=dict(color="magenta", width=8)
+    )
+    scatter3d_camera_U = go.Scatter3d(
+        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]-axes_length*df['gimbalUnitVectorD_1'][idx]],
+        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]-axes_length*df['gimbalUnitVectorD_0'][idx]],
+        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]+axes_length*df['gimbalUnitVectorD_2'][idx]],
+        name='frame_camera_U',
+        mode='lines',
+        line=dict(color="yellow", width=8)
+    )
+
+    # Camera Boundaries
+    scatter3d_camera_T = go.Scatter3d(
+        x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx],
+           df['posNED_m_1'][idx],
+           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUR_1'][idx]],
+        y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx],
+           df['posNED_m_0'][idx],
+           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUR_0'][idx]],
+        z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx],
+           -df['posNED_m_2'][idx],
+           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUR_2'][idx]],
+        name='frame_camera_T',
+        mode='lines',
+        line=dict(color="black", width=2)
+    )
+    scatter3d_camera_B = go.Scatter3d(
+        x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBL_1'][idx],
+           df['posNED_m_1'][idx],
+           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBR_1'][idx]],
+        y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBL_0'][idx],
+           df['posNED_m_0'][idx],
+           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBR_0'][idx]],
+        z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBL_2'][idx],
+           -df['posNED_m_2'][idx],
+           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBR_2'][idx]],
+        name='frame_camera_B',
+        mode='lines',
+        line=dict(color="black", width=2)
+    )
+    scatter3d_camera_boundary = go.Scatter3d(
+        x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx],
+           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUR_1'][idx],
+           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBR_1'][idx],
+           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBL_1'][idx],
+           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx]],
+        y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx],
+           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUR_0'][idx],
+           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBR_0'][idx],
+           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBL_0'][idx],
+           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx]],
+        z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx],
+           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUR_2'][idx],
+           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBR_2'][idx],
+           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBL_2'][idx],
+           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx]],
+        name='frame_camera_boundary',
+        mode='lines',
+        line=dict(color="black", width=4)
+    )
+
     frame.append(scatter3d_drone_E)
     frame.append(scatter3d_drone_N)
     frame.append(scatter3d_drone_U)
+    frame.append(scatter3d_camera_E)
+    frame.append(scatter3d_camera_N)
+    frame.append(scatter3d_camera_U)
+    frame.append(scatter3d_camera_T)
+    frame.append(scatter3d_camera_B)
+    frame.append(scatter3d_camera_boundary)
     return frame
 
 
