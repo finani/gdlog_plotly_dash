@@ -253,6 +253,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
         try:
             content_type, content_string = contents.split(',')
             decoded = base64.b64decode(content_string)
+            df_header_list_sorted = []
             if 'gdLog' in filename:
                 if 'csv' in filename:
                     df = pd.read_csv(io.StringIO(decoded.decode('utf-8')),
@@ -531,13 +532,14 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     np_pc = np_pc.astype(np.float)
                     np_pc = np_pc.reshape(-1, 3)
                     df_pc = pd.DataFrame(np_pc, columns=['x', 'y', 'z'])
+                    # df_pc = pd.concat([df_pc, pd.DataFrame(np_pc, columns=['x', 'y', 'z'])])
                     parsing_log = parsing_log + 'pointCloud csv file!\n'
             strNames = strNames + filename + '\n'
             strDates = strDates + \
                 str(datetime.datetime.fromtimestamp(date)) + '\n'
             strDecoded = strDecoded + str(decoded[0:100]) + '...\n'
         except Exception as e:
-            print(e)
+            print('[parse_contents::read_files] ' + str(e))
             return html.Div([
                 'There was an error processing this file.'
             ])
@@ -575,24 +577,27 @@ def update_df_data(submit_clicks):
     global df, fcMcMode_index, fcMcMode_value, fcMcMode_color
     global prev_submit_clicks
 
-    if submit_clicks != prev_submit_clicks:
-        for idx in range(len(fcMcMode_index)-1):
-            if fcMcMode_value[idx] == 'Guide':
-                cut_begin_idx = idx
-                cut_begin = fcMcMode_index[idx]
-                break
-        for idx in reversed(range(len(fcMcMode_index)-1)):
-            if fcMcMode_value[idx] == 'Guide':
-                cut_end_idx = idx
-                cut_end = fcMcMode_index[idx]
-                break
-        df = df[cut_begin:cut_end]
-        df = df.reset_index(drop=True)
-        fcMcMode_index = fcMcMode_index[cut_begin_idx:cut_end_idx] - fcMcMode_index[cut_begin_idx]
-        fcMcMode_value = fcMcMode_value[cut_begin_idx:cut_end_idx]
-        fcMcMode_color = fcMcMode_color[cut_begin_idx:cut_end_idx]
-        
-        prev_submit_clicks = submit_clicks
+    try:
+        if submit_clicks != prev_submit_clicks:
+            for idx in range(len(fcMcMode_index)-1):
+                if fcMcMode_value[idx] == 'Guide':
+                    cut_begin_idx = idx
+                    cut_begin = fcMcMode_index[idx]
+                    break
+            for idx in reversed(range(len(fcMcMode_index)-1)):
+                if fcMcMode_value[idx] == 'Guide':
+                    cut_end_idx = idx
+                    cut_end = fcMcMode_index[idx]
+                    break
+            df = df[cut_begin:cut_end]
+            df = df.reset_index(drop=True)
+            fcMcMode_index = fcMcMode_index[cut_begin_idx:cut_end_idx] - fcMcMode_index[cut_begin_idx]
+            fcMcMode_value = fcMcMode_value[cut_begin_idx:cut_end_idx]
+            fcMcMode_color = fcMcMode_color[cut_begin_idx:cut_end_idx]
+
+            prev_submit_clicks = submit_clicks
+    except Exception as e:
+        print('[update_df_data::cut_data] ' + str(e))
     return 0
 
 
@@ -710,7 +715,7 @@ def update_graph_data(df_header, df_header_2,
                     col=1
                 )
     except Exception as e:
-        print(e)
+        print('[update_graph_data::df_header] ' + str(e))
     try:
         for y_title in df_header_2:
             figure.add_trace(go.Scatter(
@@ -721,7 +726,7 @@ def update_graph_data(df_header, df_header_2,
                 col=1
             )
     except Exception as e:
-        print(e)
+        print('[update_graph_data::df_header2] ' + str(e))
     try:
         for idx in range(len(fcMcMode_index)-1):
             figure.add_vrect(
@@ -735,7 +740,7 @@ def update_graph_data(df_header, df_header_2,
                 opacity=0.2
             )
     except Exception as e:
-        print(e)
+        print('[update_graph_data::vrect] ' + str(e))
     figure.update_layout(
         xaxis=dict(
             rangeslider=dict(
@@ -893,7 +898,7 @@ def make_frames(df, step_size):
 )
 def update_3d_graph_data(plot_data_value):
     global df
-    step_size = 100
+    step_size = 50
 
     steps = [dict(method='animate',
                   args=[["{}".format(k*step_size)],
@@ -902,7 +907,7 @@ def update_3d_graph_data(plot_data_value):
                              transition=dict(duration=0)
                              )
                         ],
-                  label="{}".format(k*step_size)
+                  label="{}".format(df['dateTime'][k*step_size])
                   ) for k in range(len(df)//step_size)]
     sliders = [dict(
         x=0.1,
@@ -944,7 +949,16 @@ def update_3d_graph_data(plot_data_value):
                         frames=make_frames(df, step_size)
                         )
     except Exception as e:
-        print(e)
+        figure_3d = go.Figure(
+                        layout=go.Layout(scene=dict(
+                            xaxis_title='y_East',
+                            yaxis_title='x_North',
+                            zaxis_title='-z_Up'),
+                            height=630,
+                            margin=dict(r=20, b=10, l=10, t=10)
+                            ),
+                        )
+        print('[update_3d_graph_data::Frames] ' + str(e))
 
     if 'Flight_Path' in plot_data_value:
         try:
@@ -968,7 +982,7 @@ def update_3d_graph_data(plot_data_value):
                         'Time: %{customdata}'
                 ))
         except Exception as e:
-            print(e)
+            print('[update_3d_graph_data::Flight_Path] ' + str(e))
     if 'Lidar_PC' in plot_data_value:
         try:
             figure_3d.add_trace(go.Scatter3d(
@@ -977,7 +991,7 @@ def update_3d_graph_data(plot_data_value):
                 mode='markers',
                 marker=dict(size=3)))
         except Exception as e:
-            print(e)
+            print('[update_3d_graph_data::Lidar_PC] ' + str(e))
     config_3d = dict({'displaylogo': False})
     return figure_3d, config_3d
 
@@ -987,4 +1001,4 @@ if __name__ == '__main__':
         try:
             app.run_server(debug=True, host='127.0.0.1')
         except Exception as e:
-            print(e)
+            print('[__main__::run_server] ' + str(e))

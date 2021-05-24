@@ -429,7 +429,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 str(datetime.datetime.fromtimestamp(date)) + '\n'
             strDecoded = strDecoded + str(decoded[0:100]) + '...\n'
         except Exception as e:
-            print(e)
+            print('[parse_contents::read_files] ' + str(e))
             return html.Div([
                 'There was an error processing this file.'
             ])
@@ -467,24 +467,27 @@ def update_df_data(submit_clicks):
     global df, fcMcMode_index, fcMcMode_value, fcMcMode_color
     global prev_submit_clicks
 
-    if submit_clicks != prev_submit_clicks:
-        for idx in range(len(fcMcMode_index)-1):
-            if fcMcMode_value[idx] == 'Guide':
-                cut_begin_idx = idx
-                cut_begin = fcMcMode_index[idx]
-                break
-        for idx in reversed(range(len(fcMcMode_index)-1)):
-            if fcMcMode_value[idx] == 'Guide':
-                cut_end_idx = idx
-                cut_end = fcMcMode_index[idx]
-                break
-        df = df[cut_begin:cut_end]
-        df = df.reset_index(drop=True)
-        fcMcMode_index = fcMcMode_index[cut_begin_idx:cut_end_idx] - fcMcMode_index[cut_begin_idx]
-        fcMcMode_value = fcMcMode_value[cut_begin_idx:cut_end_idx]
-        fcMcMode_color = fcMcMode_color[cut_begin_idx:cut_end_idx]
-        
-        prev_submit_clicks = submit_clicks
+    try:
+        if submit_clicks != prev_submit_clicks:
+            for idx in range(len(fcMcMode_index)-1):
+                if fcMcMode_value[idx] == 'Guide':
+                    cut_begin_idx = idx
+                    cut_begin = fcMcMode_index[idx]
+                    break
+            for idx in reversed(range(len(fcMcMode_index)-1)):
+                if fcMcMode_value[idx] == 'Guide':
+                    cut_end_idx = idx
+                    cut_end = fcMcMode_index[idx]
+                    break
+            df = df[cut_begin:cut_end]
+            df = df.reset_index(drop=True)
+            fcMcMode_index = fcMcMode_index[cut_begin_idx:cut_end_idx] - fcMcMode_index[cut_begin_idx]
+            fcMcMode_value = fcMcMode_value[cut_begin_idx:cut_end_idx]
+            fcMcMode_color = fcMcMode_color[cut_begin_idx:cut_end_idx]
+
+            prev_submit_clicks = submit_clicks
+    except Exception as e:
+        print('[update_df_data::cut_data] ' + str(e))
     return 0
 
 
@@ -598,7 +601,7 @@ def update_graph_data(df_header, df_header_2,
                     secondary_y=False
                 )
     except Exception as e:
-        print(e)
+        print('[update_graph_data::df_header] ' + str(e))
     try:
         for y_title in df_header_2:
             figure.add_trace(go.Scatter(
@@ -608,7 +611,7 @@ def update_graph_data(df_header, df_header_2,
                 secondary_y=True
             )
     except Exception as e:
-        print(e)
+        print('[update_graph_data::df_header2] ' + str(e))
     try:
         plot_secondary_y = False
         if (df_header is None) or (len(df_header) == 0):
@@ -628,7 +631,7 @@ def update_graph_data(df_header, df_header_2,
                 secondary_y=plot_secondary_y
             )
     except Exception as e:
-        print(e)
+        print('[update_graph_data::vrect] ' + str(e))
     figure.update_layout(
         xaxis=dict(
             rangeslider=dict(
@@ -679,7 +682,7 @@ def update_3d_graph_data(value):
                         'Time: %{customdata}'
                 ))
         except Exception as e:
-            print(e)
+            print('[update_3d_graph_data::Flight_Path] ' + str(e))
     if 'Lidar_PC' in value:
         try:
             figure_3d.add_trace(go.Scatter3d(
@@ -688,7 +691,7 @@ def update_3d_graph_data(value):
                 mode='markers',
                 marker=dict(size=3)))
         except Exception as e:
-            print(e)
+            print('[update_3d_graph_data::Lidar_PC] ' + str(e))
     config_3d = dict({'displaylogo': False})
     return figure_3d, config_3d
 
@@ -698,4 +701,4 @@ if __name__ == '__main__':
         try:
             app.run_server(debug=True, host='127.0.0.1')
         except Exception as e:
-            print(e)
+            print('[__main__::run_server] ' + str(e))
