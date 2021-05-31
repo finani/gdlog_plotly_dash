@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 import signal
 import base64
@@ -53,9 +52,10 @@ prev_submit_clicks = 0
 prev_slide_ranger_clicks = 0
 
 slide_ranger_toggle = True
+animation_step_size = 50
 
 bin_data_length = 616
-bin_data_type = 'dBBBBBBffffffffffffBBBBBdddffffffffHBHBddddddddddddfffffffffffBBBffffffffffffffffffffffffffffffffBfBddfddfffffffffffffffffffffffffffffffffBBfffBBBB'
+bin_data_type = 'd6B12fB4B3d4f4fHBHB12d8f3f3B7f10f3f6f6fBfB2df2d3f12f6f3f9f2B3f4B'
 csv_header_list = ['rosTime', 'flightMode', 'ctrlDeviceStatus',
                    'fcMcMode', 'nSat', 'gpsFix', 'jobSeq',
                    'velNEDGps_mps_0', 'velNEDGps_mps_1', 'velNEDGps_mps_2',
@@ -226,22 +226,6 @@ app.layout = html.Div([
 ])
 
 
-def data_type_to_length(bin_data_type):
-    bin_data_length_from_type = 0
-    for c in bin_data_type:
-        type_length = 0
-        if c == 'd':
-            type_length = 8
-        elif c == 'f':
-            type_length = 4
-        elif c == 'H':
-            type_length = 2
-        elif c == 'B':
-            type_length = 1
-        bin_data_length_from_type = bin_data_length_from_type + type_length
-    return bin_data_length_from_type
-
-
 def parse_contents(list_of_contents, list_of_names, list_of_dates):
     global df, df_pc, fcMcMode_index, fcMcMode_value, fcMcMode_color, \
         bin_data_length, bin_data_type, csv_header_list
@@ -250,44 +234,34 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
     strDates = ''
     strDecoded = ''
     for contents, filename, date in zip(list_of_contents, list_of_names, list_of_dates):
-        try:
-            content_type, content_string = contents.split(',')
-            decoded = base64.b64decode(content_string)
-            df_header_list_sorted = []
-            if 'gdLog' in filename:
-                if 'csv' in filename:
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        df_header_list_sorted = []
+        if 'gdLog' in filename:
+            if 'csv' in filename:
+                try:
                     df = pd.read_csv(io.StringIO(decoded.decode('utf-8')),
                                      low_memory=False)
                     parsing_log = parsing_log + 'gdLog csv file!\n'
-                elif 'bin' in filename:
+                except Exception as e:
+                    print('[parse_contents::read_gdlog_csv] ' + str(e))
+            elif 'bin' in filename:
+                try:
                     with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
                         if chr(decoded[0]) == 'n':
                             print("New_Format v" + str(decoded[1]))
                             FcLogHeaderSize = decoded[3] << 8 | decoded[2]
                             FcLogTypeListSize = decoded[5] << 8 | decoded[4]
                             FcLogDataSize = decoded[7] << 8 | decoded[6]
-                            FcLogHeader = \
-                                decoded[8:8+FcLogHeaderSize].decode('ascii')
-                            FcLogTypeList = \
-                                decoded[8+FcLogHeaderSize:8+FcLogHeaderSize+FcLogTypeListSize]\
-                                .decode('ascii')
+                            FcLogHeader = decoded[8:8+FcLogHeaderSize].decode('ascii')
+                            FcLogTypeList = decoded[8+FcLogHeaderSize:8+FcLogHeaderSize+FcLogTypeListSize].decode('ascii')
 
                             csv_header_list = FcLogHeader.split(",")
-                            bin_data_type = FcLogTypeList
+                            bin_data_type = '='+FcLogTypeList # Byte order: native, Size: standard
                             bin_data_length = FcLogDataSize
 
-                            bin_data_length_from_type = \
-                                data_type_to_length(bin_data_type)
-                            for idx in range(bin_data_length
-                                             - bin_data_length_from_type
-                                             - 20):  # structure padding size: 20
-                                csv_header_list.append('pad_'+str(idx))
-                                bin_data_type = bin_data_type + 'B'
-
-                            decoded = \
-                                decoded[8+FcLogHeaderSize+FcLogTypeListSize+FcLogDataSize:]
-                        chunk = \
-                            decoded[0:len(decoded)//bin_data_length*bin_data_length]
+                            decoded = decoded[8+FcLogHeaderSize+FcLogTypeListSize:]
+                        chunk = decoded[0:len(decoded)//bin_data_length*bin_data_length]
                         data_count = 0
                         wr = csv.writer(f_csv)
                         wr.writerow(csv_header_list)
@@ -301,23 +275,73 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                         print("Saved: " + f_csv.name)
                         parsing_log = parsing_log + 'data_count : ' + str(data_count) + \
                             '\ntotal_time : ' + str(data_count/50) + ' s (50Hz)\n'
+                except Exception as e:
+                    print('[parse_contents::binary_parser] ' + str(e))
+                try:
                     df = pd.read_csv(filename.split('.')[0] + '.csv')
                     parsing_log = parsing_log + 'gdLog bin file!\n'
-                elif 'xls' in filename:
+                except Exception as e:
+                    print('[parse_contents::read_gdlog_bin] ' + str(e))
+            elif 'xls' in filename:
+                try:
                     df = pd.read_excel(io.BytesIO(decoded))
                     parsing_log = parsing_log + 'gdLog xls file!\n'
+                except Exception as e:
+                    print('[parse_contents::read_gdlog_xls] ' + str(e))
 
                 # dataFrame Post-Processing
-                # Ignore data before 2020 January 1st Wednesday AM 1:00:00
-                df = df.drop([0])  # delete data with initial value
-                df = df[df['rosTime'] > 1577840400]
-                df = df.dropna(axis=0)  # delete data with NaN
-                df = df.reset_index(drop=True)
-                df.columns = df.columns.str.strip()
+            try:
+                if len(df) > 0:
+                    # Ignore data before 2020 January 1st Wednesday AM 1:00:00
+                    df = df[df['rosTime'] > 1577840400]
+                    df = df.drop([0])  # delete data with initial value # TODO: change code to be reliable
+                    df = df.dropna(axis=0)  # delete data with NaN
+                    df = df.reset_index(drop=True)
+                    df.columns = df.columns.str.strip()
+
                 if 'rosTime' in df.columns:
                     df['dateTime'] = pd.to_datetime(df['rosTime'], unit='s') + \
                         pd.DateOffset(hours=9)
                     df['diffTime'] = df['rosTime'].diff()
+
+                if 'posNed_0' in df.columns:
+                    print('old_format_csv')
+                    df.rename(columns={
+                        'velNedGps_0': 'velNEDGps_mps_0', 'velNedGps_1': 'velNEDGps_mps_1', 'velNedGps_2': 'velNEDGps_mps_2',
+                        'posNed_0': 'posNED_m_0', 'posNed_1': 'posNED_m_1', 'posNed_2': 'posNED_m_2',
+                        'velNed_0': 'velNED_mps_0', 'velNed_1': 'velNED_mps_1', 'velNed_2': 'velNED_mps_2',
+                        'rpy_0': 'rpy_deg_0', 'rpy_1': 'rpy_deg_1', 'rpy_2': 'rpy_deg_2',
+                        'yawSp': 'yawSp_deg',
+                        'rcRoll': 'rcRPYT_0', 'rcPitch': 'rcRPYT_1', 'rcYaw': 'rcRPYT_2', 'rcThrottle': 'rcRPYT_3',
+                        'GpHealth': 'GpHealthStrength',
+                        'posGPS_0': 'posGPS_degE7_degE7_mm_0', 'posGPS_1': 'posGPS_degE7_degE7_mm_1', 'posGPS_2': 'posGPS_degE7_degE7_mm_2',
+                        'posRTK_0': 'posRTK_deg_deg_m_0', 'posRTK_1': 'posRTK_deg_deg_m_1', 'posRTK_2': 'posRTK_deg_deg_m_2',
+                        'posGpsFused_0': 'posGpsFused_rad_rad_m_0', 'posGpsFused_1': 'posGpsFused_rad_rad_m_1', 'posGpsFused_2': 'posGpsFused_rad_rad_m_2',
+                        'posGp_0': 'posGP_deg_deg_m_0', 'posGp_1': 'posGP_deg_deg_m_1', 'posGp_2': 'posGP_deg_deg_m_2',
+                        'errLatMix': 'StdJobLatCtrlPIDErrLatMix', 'errLatVis': 'StdJobLatCtrlPIDErrLatVis',
+                        'errLatLid': 'StdJobLatCtrlPIDErrLatLidNorm', 'cmdLatVelIgain': 'StdJobLatCtrlCmdVelLatIgain',
+                        'cmdLatVelMix': 'StdJobLatCtrlCmdVelLatMix', 'errLatMixRate': 'StdJobLatCtrlPIDErrLatMixRate',
+                        'errLatMixCov00': 'StdJobLatCtrlPIDErrLatMixCov00', 'errLatMixCov11': 'StdJobLatCtrlPIDErrLatMixCov11',
+                        'vbx': 'velUVW_mps_0', 'vby': 'velUVW_mps_1', 'vbz': 'velUVW_mps_2',
+                        'AcXRel': 'AcXYZRel_m_0', 'AcYRel': 'AcXYZRel_m_1', 'AcZRel': 'AcXYZRel_m_2',
+                        'AcHorWarnRange': 'AcHorWarnRange_m', 'AcHorWarnAngle': 'AcHorWarnAngle_deg',
+                        'AcVerWarnRange': 'AcVerWarnRange_m', 'AcVerWarnAngle': 'AcVerWarnAngle_deg',
+                        'LidarDist': 'LidarDist_m', 'LidarAngle': 'LidarAngle_deg',
+                        'LidarRaw_0': 'LidarRaw_m_0', 'LidarRaw_1': 'LidarRaw_m_1', 'LidarRaw_2': 'LidarRaw_m_2', 'LidarRaw_3': 'LidarRaw_m_3',
+                        'LidarRaw_4': 'LidarRaw_m_4', 'LidarRaw_5': 'LidarRaw_m_5', 'LidarRaw_6': 'LidarRaw_m_6', 'LidarRaw_7': 'LidarRaw_m_7',
+                        'LongVelCmd': 'llhVelCmd_1', 'LatVelCmd': 'llhVelCmd_0', 'HeaveVelCmd': 'llhVelCmd_2',
+                        'velCtrlI_u': 'velCtrlHdgI_0', 'velCtrlI_v': 'velCtrlHdgI_1', 'velCtrlI_d': 'velCtrlHdgI_2',
+                        'posCtrlI_N': 'posCtrlNEDI_0', 'posCtrlI_E': 'posCtrlNEDI_1', 'posCtrlI_D': 'posCtrlNEDI_2',
+                        'gimbalRollCmd': 'gimbalRpyCmd_deg_0', 'gimbalPitchCmd': 'gimbalRpyCmd_deg_1', 'gimbalYawCmd': 'gimbalRpyCmd_deg_2',
+                        'gimbalRoll': 'gimbalRpy_deg_0', 'gimbalPitch': 'gimbalRpy_deg_1', 'gimbalYaw': 'gimbalRpy_deg_2',
+                        'accBody_0': 'accBody_mpss_0', 'accBody_1': 'accBody_mpss_1', 'accBody_2': 'accBody_mpss_2',
+                        'trajCmd_T': 'trajVelCmdTNB_mps_0', 'trajCmd_N': 'trajVelCmdTNB_mps_1', 'trajCmd_B': 'trajVelCmdTNB_mps_2',
+                        'pqr_0': 'pqr_dps_0', 'pqr_1': 'pqr_dps_1', 'pqr_2': 'pqr_dps_2',
+                        'rpdCmd_0': 'rpdCmd_deg_deg_mps_0', 'rpdCmd_1': 'rpdCmd_deg_deg_mps_1', 'rpdCmd_2': 'rpdCmd_deg_deg_mps_2',
+                        'velCmdNav_0': 'velCmdHdg_mps_0', 'velCmdNav_1': 'velCmdHdg_mps_1', 'velCmdNav_2': 'velCmdHdg_mps_2',
+                        'posCmdNed_0': 'posCmdNED_m_0', 'posCmdNed_1': 'posCmdNED_m_1', 'posCmdNed_2': 'posCmdNED_m_2'
+                    },
+                        inplace=True)
 
                 if 'rpy_deg_0' in df.columns:
                     df['unitVectorN_0'] = np.cos(np.deg2rad(df['rpy_deg_1'])) * np.cos(np.deg2rad(df['rpy_deg_2']))
@@ -371,10 +395,6 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     sin_vfov = np.sin(np.deg2rad(3.17/2))
                     cos_vfov = np.cos(np.deg2rad(3.17/2))
 
-                    # R_gimbal = np.array([[cos_vfov*cos_hfov, sin_hfov, sin_vfov*cos_hfov],
-                    #                      [cos_vfov*sin_hfov, cos_hfov, sin_vfov*sin_hfov],
-                    #                      [-sin_vfov,         0,        cos_vfov]])
-
                     df['gimbalUnitVectorUL_0'] = df['gimbalRotationMatrix_00'] * cos_vfov*cos_hfov + \
                                                  df['gimbalRotationMatrix_01'] * cos_vfov*-sin_hfov + \
                                                  df['gimbalRotationMatrix_02'] * -sin_vfov
@@ -420,10 +440,12 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df.loc[df.fcMcMode == 1, 'strFcMcMode'] = 'Guide'
                     df.loc[df.fcMcMode == 2, 'strFcMcMode'] = 'Auto'
                     df.loc[df.fcMcMode == 3, 'strFcMcMode'] = 'Boot'
+                    df.loc[df.fcMcMode == 4, 'strFcMcMode'] = 'Standby'
                     df.loc[df.fcMcMode == 0, 'colorFcMcMode'] = 'yellow'
-                    df.loc[df.fcMcMode == 1, 'colorFcMcMode'] = 'Blue'
+                    df.loc[df.fcMcMode == 1, 'colorFcMcMode'] = 'lightcoral'
                     df.loc[df.fcMcMode == 2, 'colorFcMcMode'] = 'turquoise'
                     df.loc[df.fcMcMode == 3, 'colorFcMcMode'] = 'LightPink'
+                    df.loc[df.fcMcMode == 4, 'colorFcMcMode'] = 'Blue'
                     df['diffFcMcMode'] = df['fcMcMode'].diff()
 
                     fcMcMode_index = df.index[df['diffFcMcMode'] != 0].tolist()
@@ -525,24 +547,27 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df.loc[df.yawOpType == 3, 'strYawOpType'] = 'FOWARD'
 
                 df_header_list_sorted = sorted(df.columns.tolist())
-            elif 'pointCloud' in filename:
-                if 'csv' in filename:
+            except Exception as e:
+                print('[parse_contents::data_post_processing] ' + str(e))
+        elif 'pointCloud' in filename:
+            if 'csv' in filename:
+                try:
                     np_pc = np.loadtxt(io.StringIO(decoded.decode('utf-8')),
                                        delimiter=',')
                     np_pc = np_pc.astype(np.float)
                     np_pc = np_pc.reshape(-1, 3)
                     df_pc = pd.DataFrame(np_pc, columns=['x', 'y', 'z'])
-                    # df_pc = pd.concat([df_pc, pd.DataFrame(np_pc, columns=['x', 'y', 'z'])])
+                    # df_pc = pd.concat([df_pc, pd.DataFrame(np_pc, columns=['x', 'y', 'z'])]) # Accumulate the lidar data
                     parsing_log = parsing_log + 'pointCloud csv file!\n'
+                except Exception as e:
+                    print('[parse_contents::read_pointCloud_csv] ' + str(e))
+        try:
             strNames = strNames + filename + '\n'
             strDates = strDates + \
                 str(datetime.datetime.fromtimestamp(date)) + '\n'
             strDecoded = strDecoded + str(decoded[0:100]) + '...\n'
         except Exception as e:
-            print('[parse_contents::read_files] ' + str(e))
-            return html.Div([
-                'There was an error processing this file.'
-            ])
+            print('[parse_contents::make_string] ' + str(e))
         confirm_msg = '[Parsing Log]\n' + parsing_log + \
                       '\n[File Names]\n' + strNames + \
                       '\n[Raw Contents]\n' + strDecoded + \
@@ -585,13 +610,14 @@ def update_df_data(submit_clicks):
                     cut_begin = fcMcMode_index[idx]
                     break
             for idx in reversed(range(len(fcMcMode_index)-1)):
-                if fcMcMode_value[idx] == 'Guide':
-                    cut_end_idx = idx
-                    cut_end = fcMcMode_index[idx]
+                if fcMcMode_value[idx] != 'RC':
+                    cut_end_idx = idx+1
+                    cut_end = fcMcMode_index[idx+1]
                     break
             df = df[cut_begin:cut_end]
             df = df.reset_index(drop=True)
             fcMcMode_index = fcMcMode_index[cut_begin_idx:cut_end_idx] - fcMcMode_index[cut_begin_idx]
+            fcMcMode_index = np.append(fcMcMode_index, len(df)-1)
             fcMcMode_value = fcMcMode_value[cut_begin_idx:cut_end_idx]
             fcMcMode_color = fcMcMode_color[cut_begin_idx:cut_end_idx]
 
@@ -715,7 +741,7 @@ def update_graph_data(df_header, df_header_2,
                     col=1
                 )
     except Exception as e:
-        print('[update_graph_data::df_header] ' + str(e))
+        print('[update_graph_data::df_header_trace] ' + str(e))
     try:
         for y_title in df_header_2:
             figure.add_trace(go.Scatter(
@@ -726,7 +752,7 @@ def update_graph_data(df_header, df_header_2,
                 col=1
             )
     except Exception as e:
-        print('[update_graph_data::df_header2] ' + str(e))
+        print('[update_graph_data::df_header2_trace] ' + str(e))
     try:
         for idx in range(len(fcMcMode_index)-1):
             figure.add_vrect(
@@ -734,13 +760,13 @@ def update_graph_data(df_header, df_header_2,
                 x1=df.iloc[fcMcMode_index[idx+1]].dateTime,
                 line_width=0,
                 annotation_text=fcMcMode_value[idx],
-                annotation_position="top left",
+                annotation_position="bottom left" if fcMcMode_value[idx]=='Guide' else "top left",
                 fillcolor=fcMcMode_color[idx],
                 layer="below",
                 opacity=0.2
             )
     except Exception as e:
-        print('[update_graph_data::vrect] ' + str(e))
+        print('[update_graph_data::fcMcMode_vrect] ' + str(e))
     figure.update_layout(
         xaxis=dict(
             rangeslider=dict(
@@ -764,120 +790,130 @@ def update_graph_data(df_header, df_header_2,
 
 def make_plots_per_one_frame(df, idx):
     frame = []
-    axes_length = 5
+    drone_axes_length = 5
+    gimbal_axes_length = 3
     camera_ray_length = 10
 
     # Drone Axes
-    scatter3d_drone_E = go.Scatter3d(
-        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+axes_length*df['unitVectorE_1'][idx]],
-        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+axes_length*df['unitVectorE_0'][idx]],
-        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-axes_length*df['unitVectorE_2'][idx]],
-        name='frame_drone_E',
-        mode='lines',
-        line=dict(color="red", width=10)
-    )
-    scatter3d_drone_N = go.Scatter3d(
-        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+axes_length*df['unitVectorN_1'][idx]],
-        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+axes_length*df['unitVectorN_0'][idx]],
-        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-axes_length*df['unitVectorN_2'][idx]],
-        name='frame_drone_N',
-        mode='lines',
-        line=dict(color="green", width=10)
-    )
-    scatter3d_drone_U = go.Scatter3d(
-        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]-axes_length*df['unitVectorD_1'][idx]],
-        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]-axes_length*df['unitVectorD_0'][idx]],
-        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]+axes_length*df['unitVectorD_2'][idx]],
-        name='frame_drone_U',
-        mode='lines',
-        line=dict(color="blue", width=10)
-    )
+    try:
+        scatter3d_drone_N = go.Scatter3d(
+            x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+drone_axes_length*df['unitVectorN_1'][idx]],
+            y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+drone_axes_length*df['unitVectorN_0'][idx]],
+            z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-drone_axes_length*df['unitVectorN_2'][idx]],
+            name='frame_drone_N',
+            mode='lines',
+            line=dict(color="red", width=10)
+        )
+        scatter3d_drone_E = go.Scatter3d(
+            x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+drone_axes_length*df['unitVectorE_1'][idx]],
+            y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+drone_axes_length*df['unitVectorE_0'][idx]],
+            z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-drone_axes_length*df['unitVectorE_2'][idx]],
+            name='frame_drone_E',
+            mode='lines',
+            line=dict(color="green", width=10)
+        )
+        scatter3d_drone_D = go.Scatter3d(
+            x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+drone_axes_length*df['unitVectorD_1'][idx]],
+            y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+drone_axes_length*df['unitVectorD_0'][idx]],
+            z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-drone_axes_length*df['unitVectorD_2'][idx]],
+            name='frame_drone_U',
+            mode='lines',
+            line=dict(color="blue", width=10)
+        )
+        frame.append(scatter3d_drone_N)
+        frame.append(scatter3d_drone_E)
+        frame.append(scatter3d_drone_D)
+    except Exception as e:
+        print('[make_plots_per_one_frame::drone_axes] ' + str(e))
 
     # Camera Axes
-    scatter3d_camera_E = go.Scatter3d(
-        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+axes_length*df['gimbalUnitVectorE_1'][idx]],
-        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+axes_length*df['gimbalUnitVectorE_0'][idx]],
-        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-axes_length*df['gimbalUnitVectorE_2'][idx]],
-        name='frame_camera_E',
-        mode='lines',
-        line=dict(color="cyan", width=8)
-    )
-    scatter3d_camera_N = go.Scatter3d(
-        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+axes_length*df['gimbalUnitVectorN_1'][idx]],
-        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+axes_length*df['gimbalUnitVectorN_0'][idx]],
-        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-axes_length*df['gimbalUnitVectorN_2'][idx]],
-        name='frame_camera_N',
-        mode='lines',
-        line=dict(color="magenta", width=8)
-    )
-    scatter3d_camera_U = go.Scatter3d(
-        x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]-axes_length*df['gimbalUnitVectorD_1'][idx]],
-        y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]-axes_length*df['gimbalUnitVectorD_0'][idx]],
-        z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]+axes_length*df['gimbalUnitVectorD_2'][idx]],
-        name='frame_camera_U',
-        mode='lines',
-        line=dict(color="yellow", width=8)
-    )
+    try:
+        scatter3d_camera_N = go.Scatter3d(
+            x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+gimbal_axes_length*df['gimbalUnitVectorN_1'][idx]],
+            y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+gimbal_axes_length*df['gimbalUnitVectorN_0'][idx]],
+            z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-gimbal_axes_length*df['gimbalUnitVectorN_2'][idx]],
+            name='frame_camera_N',
+            mode='lines',
+            line=dict(color="cyan", width=8)
+        )
+        scatter3d_camera_E = go.Scatter3d(
+            x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+gimbal_axes_length*df['gimbalUnitVectorE_1'][idx]],
+            y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+gimbal_axes_length*df['gimbalUnitVectorE_0'][idx]],
+            z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-gimbal_axes_length*df['gimbalUnitVectorE_2'][idx]],
+            name='frame_camera_E',
+            mode='lines',
+            line=dict(color="magenta", width=8)
+        )
+        scatter3d_camera_D = go.Scatter3d(
+            x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+gimbal_axes_length*df['gimbalUnitVectorD_1'][idx]],
+            y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+gimbal_axes_length*df['gimbalUnitVectorD_0'][idx]],
+            z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-gimbal_axes_length*df['gimbalUnitVectorD_2'][idx]],
+            name='frame_camera_U',
+            mode='lines',
+            line=dict(color="yellow", width=8)
+        )
+        frame.append(scatter3d_camera_N)
+        frame.append(scatter3d_camera_E)
+        frame.append(scatter3d_camera_D)
+    except Exception as e:
+        print('[make_plots_per_one_frame::camera_axes] ' + str(e))
 
     # Camera Boundaries
-    scatter3d_camera_T = go.Scatter3d(
-        x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx],
-           df['posNED_m_1'][idx],
-           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUR_1'][idx]],
-        y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx],
-           df['posNED_m_0'][idx],
-           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUR_0'][idx]],
-        z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx],
-           -df['posNED_m_2'][idx],
-           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUR_2'][idx]],
-        name='frame_camera_T',
-        mode='lines',
-        line=dict(color="black", width=2)
-    )
-    scatter3d_camera_B = go.Scatter3d(
-        x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBL_1'][idx],
-           df['posNED_m_1'][idx],
-           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBR_1'][idx]],
-        y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBL_0'][idx],
-           df['posNED_m_0'][idx],
-           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBR_0'][idx]],
-        z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBL_2'][idx],
-           -df['posNED_m_2'][idx],
-           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBR_2'][idx]],
-        name='frame_camera_B',
-        mode='lines',
-        line=dict(color="black", width=2)
-    )
-    scatter3d_camera_boundary = go.Scatter3d(
-        x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx],
-           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUR_1'][idx],
-           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBR_1'][idx],
-           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBL_1'][idx],
-           df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx]],
-        y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx],
-           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUR_0'][idx],
-           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBR_0'][idx],
-           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBL_0'][idx],
-           df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx]],
-        z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx],
-           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUR_2'][idx],
-           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBR_2'][idx],
-           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBL_2'][idx],
-           -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx]],
-        name='frame_camera_boundary',
-        mode='lines',
-        line=dict(color="black", width=4)
-    )
+    try:
+        scatter3d_camera_T = go.Scatter3d(
+            x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx],
+               df['posNED_m_1'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUR_1'][idx]],
+            y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx],
+               df['posNED_m_0'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUR_0'][idx]],
+            z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx],
+               -df['posNED_m_2'][idx],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUR_2'][idx]],
+            name='frame_camera_T',
+            mode='lines',
+            line=dict(color="black", width=2)
+        )
+        scatter3d_camera_B = go.Scatter3d(
+            x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBL_1'][idx],
+               df['posNED_m_1'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBR_1'][idx]],
+            y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBL_0'][idx],
+               df['posNED_m_0'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBR_0'][idx]],
+            z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBL_2'][idx],
+               -df['posNED_m_2'][idx],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBR_2'][idx]],
+            name='frame_camera_B',
+            mode='lines',
+            line=dict(color="black", width=2)
+        )
+        scatter3d_camera_boundary = go.Scatter3d(
+            x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUR_1'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBR_1'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBL_1'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx]],
+            y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUR_0'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBR_0'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBL_0'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx]],
+            z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUR_2'][idx],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBR_2'][idx],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBL_2'][idx],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx]],
+            name='frame_camera_boundary',
+            mode='lines',
+            line=dict(color="black", width=4)
+        )
+        frame.append(scatter3d_camera_T)
+        frame.append(scatter3d_camera_B)
+        frame.append(scatter3d_camera_boundary)
+    except Exception as e:
+        print('[make_plots_per_one_frame::camera_boundaries] ' + str(e))
 
-    frame.append(scatter3d_drone_E)
-    frame.append(scatter3d_drone_N)
-    frame.append(scatter3d_drone_U)
-    frame.append(scatter3d_camera_E)
-    frame.append(scatter3d_camera_N)
-    frame.append(scatter3d_camera_U)
-    frame.append(scatter3d_camera_T)
-    frame.append(scatter3d_camera_B)
-    frame.append(scatter3d_camera_boundary)
     return frame
 
 
@@ -897,18 +933,17 @@ def make_frames(df, step_size):
     [Input("output_select_data_checklist", "value")]
 )
 def update_3d_graph_data(plot_data_value):
-    global df
-    step_size = 50
+    global df, animation_step_size
 
     steps = [dict(method='animate',
-                  args=[["{}".format(k*step_size)],
+                  args=[["{}".format(k*animation_step_size)],
                         dict(mode='immediate',
                              frame=dict(duration=300),
                              transition=dict(duration=0)
                              )
                         ],
-                  label="{}".format(df['dateTime'][k*step_size])
-                  ) for k in range(len(df)//step_size)]
+                  label="{}".format(df['dateTime'][k*animation_step_size])
+                  ) for k in range(len(df)//animation_step_size)]
     sliders = [dict(
         x=0.1,
         y=0,
@@ -946,7 +981,7 @@ def update_3d_graph_data(plot_data_value):
                             sliders=sliders,
                             updatemenus=updatemenus,
                             ),
-                        frames=make_frames(df, step_size)
+                        frames=make_frames(df, animation_step_size)
                         )
     except Exception as e:
         figure_3d = go.Figure(
@@ -975,11 +1010,11 @@ def update_3d_graph_data(plot_data_value):
                     text=df_jobSeq['strFcMcMode'],
                     customdata=df_jobSeq['dateTime'],
                     hovertemplate=
+                        'Time: <b>%{customdata}</b><br>' +
                         'fcMcMode: <b>%{text}</b><br>' +
-                        'X: %{x}<br>' +
-                        'Y: %{y}<br>' +
-                        'Z: %{z}<br>' +
-                        'Time: %{customdata}'
+                        'X: <b>%{x}</b><br>' +
+                        'Y: <b>%{y}</b><br>' +
+                        'Z: <b>%{z}</b>'
                 ))
         except Exception as e:
             print('[update_3d_graph_data::Flight_Path] ' + str(e))
@@ -997,8 +1032,11 @@ def update_3d_graph_data(plot_data_value):
 
 
 if __name__ == '__main__':
+    host_address='127.0.0.1'
+    if len(sys.argv) > 1:
+        host_address=sys.argv[1]
     while(True):
         try:
-            app.run_server(debug=True, host='127.0.0.1')
+            app.run_server(debug=True, host=host_address)
         except Exception as e:
             print('[__main__::run_server] ' + str(e))
