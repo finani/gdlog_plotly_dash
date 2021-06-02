@@ -186,7 +186,7 @@ def update_graph_data(df_header, df_header_2):
                 line=dict(width=3)),
             )
     except Exception as e:
-        print('[update_graph_data::df_headers] ' + str(e))
+        print('[update_graph_data::df_headers_trace] ' + str(e))
     figure.update_layout(
         xaxis=dict(
             rangeslider=dict(
@@ -202,8 +202,11 @@ def update_graph_data(df_header, df_header_2):
 
 
 if __name__ == '__main__':
+    host_address='127.0.0.1'
+    if len(sys.argv) > 1:
+        host_address=sys.argv[1]
     while(True):
         try:
-            app.run_server(debug=True, host='127.0.0.1')
+            app.run_server(debug=True, host=host_address)
         except Exception as e:
             print('[__main__::run_server] ' + str(e))
