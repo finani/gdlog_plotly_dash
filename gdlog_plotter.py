@@ -5,6 +5,7 @@ import signal
 import base64
 import datetime
 import io
+import copy
 import struct
 import csv
 
@@ -142,7 +143,13 @@ app.layout = html.Div([
             'display': 'inline'
     }
     ),
-    html.Hr(),
+    html.Hr(style={
+            'margin-bottom': '1.5rem'
+    }),
+    html.Div(
+        id='output_log_status',
+        children=''
+    ),
     dcc.Tabs([
         dcc.Tab(label='2D Data Plot', children=[
             html.Label([
@@ -226,6 +233,57 @@ app.layout = html.Div([
 ])
 
 
+def hamilton_product(df_q1_name, q2, df_q3_name):
+    if isinstance(q2, list) and (len(q2) == 3):  # v' = qvq*, [q=q1: df, v=q2: list[3], v'=q3: df], vector rotation
+        q2 = [0] + q2
+        df[df_q3_name+'_vq_0'] = q2[0]* df[df_q1_name+'_0'] - q2[1]*-df[df_q1_name+'_1'] - \
+                                 q2[2]*-df[df_q1_name+'_2'] - q2[3]*-df[df_q1_name+'_3']
+        df[df_q3_name+'_vq_1'] = q2[0]*-df[df_q1_name+'_1'] + q2[1]* df[df_q1_name+'_0'] + \
+                                 q2[2]*-df[df_q1_name+'_3'] - q2[3]*-df[df_q1_name+'_2']
+        df[df_q3_name+'_vq_2'] = q2[0]*-df[df_q1_name+'_2'] - q2[1]*-df[df_q1_name+'_3'] + \
+                                 q2[2]* df[df_q1_name+'_0'] + q2[3]*-df[df_q1_name+'_1']
+        df[df_q3_name+'_vq_3'] = q2[0]*-df[df_q1_name+'_3'] + q2[1]*-df[df_q1_name+'_2'] - \
+                                 q2[2]*-df[df_q1_name+'_1'] + q2[3]* df[df_q1_name+'_0']
+        df[df_q3_name+'_0'] = df[df_q1_name+'_0']*df[df_q3_name+'_vq_1'] + df[df_q1_name+'_1']*df[df_q3_name+'_vq_0'] + \
+                              df[df_q1_name+'_2']*df[df_q3_name+'_vq_3'] - df[df_q1_name+'_3']*df[df_q3_name+'_vq_2']
+        df[df_q3_name+'_1'] = df[df_q1_name+'_0']*df[df_q3_name+'_vq_2'] - df[df_q1_name+'_1']*df[df_q3_name+'_vq_3'] + \
+                              df[df_q1_name+'_2']*df[df_q3_name+'_vq_0'] + df[df_q1_name+'_3']*df[df_q3_name+'_vq_1']
+        df[df_q3_name+'_2'] = df[df_q1_name+'_0']*df[df_q3_name+'_vq_3'] + df[df_q1_name+'_1']*df[df_q3_name+'_vq_2'] - \
+                              df[df_q1_name+'_2']*df[df_q3_name+'_vq_1'] + df[df_q1_name+'_3']*df[df_q3_name+'_vq_0']
+    elif isinstance(q2, list) and (len(q2) == 4):  # q3 = hamilton_product(q1,q2), [q1: df, q2: list[4]]
+        df[df_q3_name+'_0'] = df[df_q1_name+'_0']*q2[0] - df[df_q1_name+'_1']*q2[1] - \
+                              df[df_q1_name+'_2']*q2[2] - df[df_q1_name+'_3']*q2[3]
+        df[df_q3_name+'_1'] = df[df_q1_name+'_0']*q2[1] + df[df_q1_name+'_1']*q2[0] + \
+                              df[df_q1_name+'_2']*q2[3] - df[df_q1_name+'_3']*q2[2]
+        df[df_q3_name+'_2'] = df[df_q1_name+'_0']*q2[2] - df[df_q1_name+'_1']*q2[3] + \
+                              df[df_q1_name+'_2']*q2[0] + df[df_q1_name+'_3']*q2[1]
+        df[df_q3_name+'_3'] = df[df_q1_name+'_0']*q2[3] + df[df_q1_name+'_1']*q2[2] - \
+                              df[df_q1_name+'_2']*q2[1] + df[df_q1_name+'_3']*q2[0]
+    else:  # q3 = hamilton_product(q1,q2), [q1: df, q2: df]
+        df[df_q3_name+'_0'] = df[df_q1_name+'_0']*df[q2+'_0'] - df[df_q1_name+'_1']*df[q2+'_1'] - \
+                              df[df_q1_name+'_2']*df[q2+'_2'] - df[df_q1_name+'_3']*df[q2+'_3']
+        df[df_q3_name+'_1'] = df[df_q1_name+'_0']*df[q2+'_1'] + df[df_q1_name+'_1']*df[q2+'_0'] + \
+                              df[df_q1_name+'_2']*df[q2+'_3'] - df[df_q1_name+'_3']*df[q2+'_2']
+        df[df_q3_name+'_2'] = df[df_q1_name+'_0']*df[q2+'_2'] - df[df_q1_name+'_1']*df[q2+'_3'] + \
+                              df[df_q1_name+'_2']*df[q2+'_0'] + df[df_q1_name+'_3']*df[q2+'_1']
+        df[df_q3_name+'_3'] = df[df_q1_name+'_0']*df[q2+'_3'] + df[df_q1_name+'_1']*df[q2+'_2'] - \
+                              df[df_q1_name+'_2']*df[q2+'_1'] + df[df_q1_name+'_3']*df[q2+'_0']
+    return 0
+
+
+def norm_df(df_name, df_size, df_norm_name):
+    if df_size == 3:
+        df[df_norm_name] = np.sqrt(df[df_name+'_0']*df[df_name+'_0'] + \
+                                   df[df_name+'_1']*df[df_name+'_1'] + \
+                                   df[df_name+'_2']*df[df_name+'_2'])
+    elif df_size == 4:
+        df[df_norm_name] = np.sqrt(df[df_name+'_0']*df[df_name+'_0'] + \
+                                   df[df_name+'_1']*df[df_name+'_1'] + \
+                                   df[df_name+'_2']*df[df_name+'_2'] + \
+                                   df[df_name+'_3']*df[df_name+'_3'])
+    return 0
+
+
 def parse_contents(list_of_contents, list_of_names, list_of_dates):
     global df, df_pc, fcMcMode_index, fcMcMode_value, fcMcMode_color, \
         bin_data_length, bin_data_type, csv_header_list
@@ -233,6 +291,11 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
     strNames = ''
     strDates = ''
     strDecoded = ''
+    strFcLogVersion = ''
+    strFcType = ''
+    strUAVModel = ''
+    strIsSim = ''
+    strMissionType = ''
     for contents, filename, date in zip(list_of_contents, list_of_names, list_of_dates):
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
@@ -249,7 +312,8 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 try:
                     with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
                         if chr(decoded[0]) == 'n':
-                            print("New_Format v" + str(decoded[1]))
+                            strFcLogVersion = str(decoded[1])
+                            print("New_Format v" + strFcLogVersion)
                             FcLogHeaderSize = decoded[3] << 8 | decoded[2]
                             FcLogTypeListSize = decoded[5] << 8 | decoded[4]
                             FcLogDataSize = decoded[7] << 8 | decoded[6]
@@ -294,7 +358,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 if len(df) > 0:
                     # Ignore data before 2020 January 1st Wednesday AM 1:00:00
                     df = df[df['rosTime'] > 1577840400]
-                    df = df.drop([0])  # delete data with initial value # TODO: change code to be reliable
+                    df = df.drop([0])  # delete data with initial value
                     df = df.dropna(axis=0)  # delete data with NaN
                     df = df.reset_index(drop=True)
                     df.columns = df.columns.str.strip()
@@ -343,97 +407,87 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     },
                         inplace=True)
 
-                if 'rpy_deg_0' in df.columns:
-                    df['unitVectorN_0'] = np.cos(np.deg2rad(df['rpy_deg_1'])) * np.cos(np.deg2rad(df['rpy_deg_2']))
-                    df['unitVectorN_1'] = np.cos(np.deg2rad(df['rpy_deg_1'])) * np.sin(np.deg2rad(df['rpy_deg_2']))
-                    df['unitVectorN_2'] = -np.sin(np.deg2rad(df['rpy_deg_1']))
+                if ('rpy_deg_0' in df.columns) and not ('quat_0' in df.columns):
+                    sin_half_roll = np.sin(np.deg2rad(df['rpy_deg_0'])/2.0)
+                    cos_half_roll = np.cos(np.deg2rad(df['rpy_deg_0'])/2.0)
+                    sin_half_pitch = np.sin(np.deg2rad(df['rpy_deg_1'])/2.0)
+                    cos_half_pitch = np.cos(np.deg2rad(df['rpy_deg_1'])/2.0)
+                    sin_half_yaw = np.sin(np.deg2rad(df['rpy_deg_2'])/2.0)
+                    cos_half_yaw = np.cos(np.deg2rad(df['rpy_deg_2'])/2.0)
 
-                    df['unitVectorE_0'] = np.sin(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_1'])) * np.cos(np.deg2rad(df['rpy_deg_2'])) \
-                                            - np.cos(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_2']))
-                    df['unitVectorE_1'] = np.sin(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_1'])) * np.sin(np.deg2rad(df['rpy_deg_2'])) \
-                                            + np.cos(np.deg2rad(df['rpy_deg_0'])) * np.cos(np.deg2rad(df['rpy_deg_2']))
-                    df['unitVectorE_2'] = np.sin(np.deg2rad(df['rpy_deg_0'])) * np.cos(np.deg2rad(df['rpy_deg_1']))
+                    df['quat_0'] = cos_half_roll*cos_half_pitch*cos_half_yaw + sin_half_roll*sin_half_pitch*sin_half_yaw
+                    df['quat_1'] = sin_half_roll*cos_half_pitch*cos_half_yaw - cos_half_roll*sin_half_pitch*sin_half_yaw
+                    df['quat_2'] = cos_half_roll*sin_half_pitch*cos_half_yaw + sin_half_roll*cos_half_pitch*sin_half_yaw
+                    df['quat_3'] = cos_half_roll*cos_half_pitch*sin_half_yaw - sin_half_roll*sin_half_pitch*cos_half_yaw
 
-                    df['unitVectorD_0'] = np.cos(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_1'])) * np.cos(np.deg2rad(df['rpy_deg_2'])) \
-                                            - np.sin(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_2']))
-                    df['unitVectorD_1'] = np.cos(np.deg2rad(df['rpy_deg_0'])) * np.sin(np.deg2rad(df['rpy_deg_1'])) * np.sin(np.deg2rad(df['rpy_deg_2'])) \
-                                            + np.sin(np.deg2rad(df['rpy_deg_0'])) * np.cos(np.deg2rad(df['rpy_deg_2']))
-                    df['unitVectorD_2'] = np.cos(np.deg2rad(df['rpy_deg_0'])) * np.cos(np.deg2rad(df['rpy_deg_1']))
+                if 'quat_0' in df.columns:
+                    norm_df('quat', 4, 'normQuat')
+                    hamilton_product('quat', [1,0,0], 'unitVectorN')
+                    hamilton_product('quat', [0,1,0], 'unitVectorE')
+                    hamilton_product('quat', [0,0,1], 'unitVectorD')
 
                 if 'gimbalRpy_deg_0' in df.columns:
-                    sin_gimbal_roll = np.sin(np.deg2rad(df['gimbalRpy_deg_0']))
-                    cos_gimbal_roll = np.cos(np.deg2rad(df['gimbalRpy_deg_0']))
-                    sin_gimbal_pitch = np.sin(np.deg2rad(df['gimbalRpy_deg_1']))
-                    cos_gimbal_pitch = np.cos(np.deg2rad(df['gimbalRpy_deg_1']))
-                    sin_gimbal_yaw = np.sin(np.deg2rad(df['gimbalRpy_deg_2']))
-                    cos_gimbal_yaw = np.cos(np.deg2rad(df['gimbalRpy_deg_2']))
+                    sin_half_gimbal_roll = np.sin(np.deg2rad(df['gimbalRpy_deg_0'])/2.0)
+                    cos_half_gimbal_roll = np.cos(np.deg2rad(df['gimbalRpy_deg_0'])/2.0)
+                    sin_half_gimbal_pitch = np.sin(np.deg2rad(df['gimbalRpy_deg_1'])/2.0)
+                    cos_half_gimbal_pitch = np.cos(np.deg2rad(df['gimbalRpy_deg_1'])/2.0)
+                    sin_half_gimbal_yaw = np.sin(np.deg2rad(df['gimbalRpy_deg_2'])/2.0)
+                    cos_half_gimbal_yaw = np.cos(np.deg2rad(df['gimbalRpy_deg_2'])/2.0)
+                    df['gimbalQuat_0'] = cos_half_gimbal_roll*cos_half_gimbal_pitch*cos_half_gimbal_yaw + \
+                                         sin_half_gimbal_roll*sin_half_gimbal_pitch*sin_half_gimbal_yaw
+                    df['gimbalQuat_1'] = sin_half_gimbal_roll*cos_half_gimbal_pitch*cos_half_gimbal_yaw - \
+                                         cos_half_gimbal_roll*sin_half_gimbal_pitch*sin_half_gimbal_yaw
+                    df['gimbalQuat_2'] = cos_half_gimbal_roll*sin_half_gimbal_pitch*cos_half_gimbal_yaw + \
+                                         sin_half_gimbal_roll*cos_half_gimbal_pitch*sin_half_gimbal_yaw
+                    df['gimbalQuat_3'] = cos_half_gimbal_roll*cos_half_gimbal_pitch*sin_half_gimbal_yaw - \
+                                         sin_half_gimbal_roll*sin_half_gimbal_pitch*cos_half_gimbal_yaw
+                    norm_df('gimbalQuat', 4, 'normGimbalQuat')
 
-                    df['gimbalRotationMatrix_00'] = cos_gimbal_pitch*cos_gimbal_yaw
-                    df['gimbalRotationMatrix_01'] = sin_gimbal_roll*sin_gimbal_pitch*cos_gimbal_yaw - cos_gimbal_roll*sin_gimbal_yaw
-                    df['gimbalRotationMatrix_02'] = cos_gimbal_roll*sin_gimbal_pitch*cos_gimbal_yaw - sin_gimbal_roll*sin_gimbal_yaw
-                    df['gimbalRotationMatrix_10'] = cos_gimbal_pitch*sin_gimbal_yaw
-                    df['gimbalRotationMatrix_11'] = sin_gimbal_roll*sin_gimbal_pitch*sin_gimbal_yaw + cos_gimbal_roll*cos_gimbal_yaw
-                    df['gimbalRotationMatrix_12'] = cos_gimbal_roll*sin_gimbal_pitch*sin_gimbal_yaw + sin_gimbal_roll*cos_gimbal_yaw
-                    df['gimbalRotationMatrix_20'] = -sin_gimbal_pitch
-                    df['gimbalRotationMatrix_21'] = sin_gimbal_roll*cos_gimbal_pitch
-                    df['gimbalRotationMatrix_22'] = cos_gimbal_roll*cos_gimbal_pitch
+                    sin_half_hfov_yaw_UR = np.sin(np.deg2rad(4.23/2)/2.0)
+                    cos_half_hfov_yaw_UR = np.cos(np.deg2rad(4.23/2)/2.0)
+                    sin_half_vfov_pitch_UR = np.sin(np.deg2rad(3.17/2)/2.0)
+                    cos_half_vfov_pitch_UR = np.cos(np.deg2rad(3.17/2)/2.0)
 
-                    df['gimbalUnitVectorN_0'] = df['gimbalRotationMatrix_00']
-                    df['gimbalUnitVectorN_1'] = df['gimbalRotationMatrix_10']
-                    df['gimbalUnitVectorN_2'] = df['gimbalRotationMatrix_20']
+                    fovURQuat = [cos_half_vfov_pitch_UR*cos_half_hfov_yaw_UR,
+                              -sin_half_vfov_pitch_UR*sin_half_hfov_yaw_UR,
+                               sin_half_vfov_pitch_UR*cos_half_hfov_yaw_UR,
+                               cos_half_vfov_pitch_UR*sin_half_hfov_yaw_UR]
+                    fovULQuat = copy.deepcopy(fovURQuat)
+                    fovULQuat[1] = -fovULQuat[1]
+                    fovULQuat[3] = -fovULQuat[3]
+                    fovBRQuat = copy.deepcopy(fovURQuat)
+                    fovBRQuat[1] = -fovBRQuat[1]
+                    fovBRQuat[2] = -fovBRQuat[2]
+                    fovBLQuat = copy.deepcopy(fovURQuat)
+                    fovBLQuat[2] = -fovBLQuat[2]
+                    fovBLQuat[3] = -fovBLQuat[3]
 
-                    df['gimbalUnitVectorE_0'] = df['gimbalRotationMatrix_01']
-                    df['gimbalUnitVectorE_1'] = df['gimbalRotationMatrix_11']
-                    df['gimbalUnitVectorE_2'] = df['gimbalRotationMatrix_21']
+                    if ('IsSim' in df.columns) and (df.IsSim[0] == 1): # Simulation Flight
+                        hamilton_product('quat', 'gimbalQuat', 'bodyGimbalQuat')
+                        norm_df('bodyGimbalQuat', 4, 'normBodyGimbalQuat')
+                        df['gimbalQuatI_0'] = df['bodyGimbalQuat_0']
+                        df['gimbalQuatI_1'] = df['bodyGimbalQuat_1']
+                        df['gimbalQuatI_2'] = df['bodyGimbalQuat_2']
+                        df['gimbalQuatI_3'] = df['bodyGimbalQuat_3']
+                    else: # Real Flight
+                        df['gimbalQuatI_0'] = df['gimbalQuat_0']
+                        df['gimbalQuatI_1'] = df['gimbalQuat_1']
+                        df['gimbalQuatI_2'] = df['gimbalQuat_2']
+                        df['gimbalQuatI_3'] = df['gimbalQuat_3']
 
-                    df['gimbalUnitVectorD_0'] = df['gimbalRotationMatrix_02']
-                    df['gimbalUnitVectorD_1'] = df['gimbalRotationMatrix_12']
-                    df['gimbalUnitVectorD_2'] = df['gimbalRotationMatrix_22']
+                    hamilton_product('gimbalQuatI', [1,0,0], 'gimbalUnitVectorN')
+                    hamilton_product('gimbalQuatI', [0,1,0], 'gimbalUnitVectorE')
+                    hamilton_product('gimbalQuatI', [0,0,1], 'gimbalUnitVectorD')
 
-                    sin_hfov = np.sin(np.deg2rad(4.23/2))
-                    cos_hfov = np.cos(np.deg2rad(4.23/2))
-                    sin_vfov = np.sin(np.deg2rad(3.17/2))
-                    cos_vfov = np.cos(np.deg2rad(3.17/2))
+                    hamilton_product('gimbalQuatI', fovURQuat, 'bodyGimbalFovURQuat')
+                    hamilton_product('gimbalQuatI', fovULQuat, 'bodyGimbalFovULQuat')
+                    hamilton_product('gimbalQuatI', fovBRQuat, 'bodyGimbalFovBRQuat')
+                    hamilton_product('gimbalQuatI', fovBLQuat, 'bodyGimbalFovBLQuat')
 
-                    df['gimbalUnitVectorUL_0'] = df['gimbalRotationMatrix_00'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_01'] * cos_vfov*-sin_hfov + \
-                                                 df['gimbalRotationMatrix_02'] * -sin_vfov
-                    df['gimbalUnitVectorUL_1'] = df['gimbalRotationMatrix_10'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_11'] * cos_vfov*-sin_hfov + \
-                                                 df['gimbalRotationMatrix_12'] * -sin_vfov
-                    df['gimbalUnitVectorUL_2'] = df['gimbalRotationMatrix_20'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_21'] * cos_vfov*-sin_hfov + \
-                                                 df['gimbalRotationMatrix_22'] * -sin_vfov
-
-                    df['gimbalUnitVectorUR_0'] = df['gimbalRotationMatrix_00'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_01'] * cos_vfov*sin_hfov + \
-                                                 df['gimbalRotationMatrix_02'] * -sin_vfov
-                    df['gimbalUnitVectorUR_1'] = df['gimbalRotationMatrix_10'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_11'] * cos_vfov*sin_hfov + \
-                                                 df['gimbalRotationMatrix_12'] * -sin_vfov
-                    df['gimbalUnitVectorUR_2'] = df['gimbalRotationMatrix_20'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_21'] * cos_vfov*sin_hfov + \
-                                                 df['gimbalRotationMatrix_22'] * -sin_vfov
-
-                    df['gimbalUnitVectorBL_0'] = df['gimbalRotationMatrix_00'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_01'] * cos_vfov*-sin_hfov + \
-                                                 df['gimbalRotationMatrix_02'] * sin_vfov
-                    df['gimbalUnitVectorBL_1'] = df['gimbalRotationMatrix_10'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_11'] * cos_vfov*-sin_hfov + \
-                                                 df['gimbalRotationMatrix_12'] * sin_vfov
-                    df['gimbalUnitVectorBL_2'] = df['gimbalRotationMatrix_20'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_21'] * cos_vfov*-sin_hfov + \
-                                                 df['gimbalRotationMatrix_22'] * sin_vfov
-
-                    df['gimbalUnitVectorBR_0'] = df['gimbalRotationMatrix_00'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_01'] * cos_vfov*sin_hfov + \
-                                                 df['gimbalRotationMatrix_02'] * sin_vfov
-                    df['gimbalUnitVectorBR_1'] = df['gimbalRotationMatrix_10'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_11'] * cos_vfov*sin_hfov + \
-                                                 df['gimbalRotationMatrix_12'] * sin_vfov
-                    df['gimbalUnitVectorBR_2'] = df['gimbalRotationMatrix_20'] * cos_vfov*cos_hfov + \
-                                                 df['gimbalRotationMatrix_21'] * cos_vfov*sin_hfov + \
-                                                 df['gimbalRotationMatrix_22'] * sin_vfov
+                    hamilton_product('bodyGimbalFovURQuat', [1,0,0], 'fovURUnitVector')
+                    hamilton_product('bodyGimbalFovULQuat', [1,0,0], 'fovULUnitVector')
+                    hamilton_product('bodyGimbalFovBRQuat', [1,0,0], 'fovBRUnitVector')
+                    hamilton_product('bodyGimbalFovBLQuat', [1,0,0], 'fovBLUnitVector')
 
                 if 'fcMcMode' in df.columns:
                     df.loc[df.fcMcMode == 0, 'strFcMcMode'] = 'RC'
@@ -454,6 +508,26 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     fcMcMode_value = df.iloc[fcMcMode_index].strFcMcMode.tolist()
                     fcMcMode_color = df.iloc[fcMcMode_index].colorFcMcMode.tolist()
 
+                if 'fcType' in df.columns:
+                    listFcType = ['Mockup', 'DJI', 'PX4']
+                    strFcType = listFcType[df.fcType[0]]
+
+                if 'UAVModel' in df.columns:
+                    listUAVModel = ['M600', 'M210', 'M300', 'PX4']
+                    strUAVModel = listUAVModel[df.UAVModel[0]]
+
+                if 'IsSim' in df.columns:
+                    listIsSim = ['False', 'True']
+                    strIsSim = listIsSim[df.IsSim[0]]
+
+                if 'missionType' in df.columns:
+                    listMissionType = ['MISSION_TYPE_5_1', 'MISSION_TYPE_5_2', 'MISSION_TYPE_4_1',
+                                       'MISSION_TYPE_4_2', 'MISSION_TYPE_4_3', 'MISSION_TYPE_WP',
+                                       'MISSION_TYPE_3_1', 'MISSION_TYPE_3_2', 'MISSION_TYPE_6_1',
+                                       'MISSION_TYPE_6_2', 'MISSION_TYPE_6_1_SP', 'MISSION_TYPE_6_2_SP',
+                                       'MISSION_TYPE_HI']
+                    strMissionType = listMissionType[df.missionType[fcMcMode_index[fcMcMode_value.index('Guide')]]]
+
                 if 'jobType' in df.columns:
                     df.loc[df.jobType == 0, 'strJobType'] = 'INIT'
                     df.loc[df.jobType == 1, 'strJobType'] = 'STANDARD'
@@ -470,21 +544,6 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df.loc[df.jobType == 12, 'strJobType'] = 'HOPPINGBLADESURFACE'
                     df.loc[df.jobType == 13, 'strJobType'] = 'BLADEFOLLOWING'
                     df.loc[df.jobType == 255, 'strJobType'] = 'NONE'
-
-                if 'missionType' in df.columns:
-                    df.loc[df.missionType == 0, 'strMissionType'] = 'MISSION_TYPE_5_1'
-                    df.loc[df.missionType == 1, 'strMissionType'] = 'MISSION_TYPE_5_2'
-                    df.loc[df.missionType == 2, 'strMissionType'] = 'MISSION_TYPE_4_1'
-                    df.loc[df.missionType == 3, 'strMissionType'] = 'MISSION_TYPE_4_2'
-                    df.loc[df.missionType == 4, 'strMissionType'] = 'MISSION_TYPE_4_3'
-                    df.loc[df.missionType == 5, 'strMissionType'] = 'MISSION_TYPE_WP'
-                    df.loc[df.missionType == 6, 'strMissionType'] = 'MISSION_TYPE_3_1'
-                    df.loc[df.missionType == 7, 'strMissionType'] = 'MISSION_TYPE_3_2'
-                    df.loc[df.missionType == 8, 'strMissionType'] = 'MISSION_TYPE_6_1'
-                    df.loc[df.missionType == 9, 'strMissionType'] = 'MISSION_TYPE_6_2'
-                    df.loc[df.missionType == 10, 'strMissionType'] = 'MISSION_TYPE_6_1_SP'
-                    df.loc[df.missionType == 11, 'strMissionType'] = 'MISSION_TYPE_6_2_SP'
-                    df.loc[df.missionType == 12, 'strMissionType'] = 'MISSION_TYPE_HI'
 
                 if 'gpsFix' in df.columns:
                     df.loc[df.gpsFix == 0, 'strGpsFix'] = 'No_GPS'
@@ -568,11 +627,26 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
             strDecoded = strDecoded + str(decoded[0:100]) + '...\n'
         except Exception as e:
             print('[parse_contents::make_string] ' + str(e))
+        try:
+            childrenLogStatus = html.P(
+                children=['[FcLogVersion] ㅤ',
+                          html.B(strFcLogVersion),
+                          ' ㅤㅤㅤㅤ [fcType] ㅤ',
+                          html.B(strFcType),
+                          ' ㅤㅤㅤㅤ [UAVModel] ㅤ',
+                          html.B(strUAVModel),
+                          ' ㅤㅤㅤㅤ [IsSim] ㅤ',
+                          html.B(strIsSim),
+                          ' ㅤㅤㅤㅤ [missionType] ㅤ',
+                          html.B(strMissionType)]
+            )
+        except Exception as e:
+            print('[parse_contents::make_log_status] ' + str(e))
         confirm_msg = '[Parsing Log]\n' + parsing_log + \
                       '\n[File Names]\n' + strNames + \
                       '\n[Raw Contents]\n' + strDecoded + \
                       '\n[Do you want to use only the Guide/Auto Data?]\n'
-    return confirm_msg, df_header_list_sorted
+    return confirm_msg, df_header_list_sorted, childrenLogStatus
 
 
 @app.callback(
@@ -580,6 +654,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
     Output('io_data_dropdown_2', 'options'),
     Output('confirm_parsing_data', 'displayed'),
     Output('confirm_parsing_data', 'message'),
+    Output('output_log_status', 'children'),
     Input('input_upload_data', 'contents'),
     State('input_upload_data', 'filename'),
     State('input_upload_data', 'last_modified')
@@ -587,11 +662,11 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
     global df
     if list_of_contents is not None:
-        confirm_msg, df_header_list_sorted = \
+        confirm_msg, df_header_list_sorted, childrenLogStatus = \
             parse_contents(list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
-        return options, options, True, confirm_msg
+        return options, options, True, confirm_msg, childrenLogStatus
 
 
 @app.callback(
@@ -673,7 +748,7 @@ def update_graph_data(df_header, df_header_2,
 
     if prev_mission_clicks != mission_clicks:
         df_header = ['jobSeq']
-        df_header_2 = ['strJobType', 'strMissionType']
+        df_header_2 = ['strJobType']
         prev_mission_clicks = mission_clicks
     elif prev_gps_clicks != gps_clicks:
         df_header = ['nSat', 'gpsNSV', 'gpHealthStrength']
@@ -861,49 +936,49 @@ def make_plots_per_one_frame(df, idx):
     # Camera Boundaries
     try:
         scatter3d_camera_T = go.Scatter3d(
-            x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx],
+            x=[df['posNED_m_1'][idx]+camera_ray_length*df['fovULUnitVector_1'][idx], # fovBRUnitVector
                df['posNED_m_1'][idx],
-               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUR_1'][idx]],
-            y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['fovURUnitVector_1'][idx]],
+            y=[df['posNED_m_0'][idx]+camera_ray_length*df['fovULUnitVector_0'][idx],
                df['posNED_m_0'][idx],
-               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUR_0'][idx]],
-            z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['fovURUnitVector_0'][idx]],
+            z=[-df['posNED_m_2'][idx]-camera_ray_length*df['fovULUnitVector_2'][idx],
                -df['posNED_m_2'][idx],
-               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUR_2'][idx]],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['fovURUnitVector_2'][idx]],
             name='frame_camera_T',
             mode='lines',
             line=dict(color="black", width=2)
         )
         scatter3d_camera_B = go.Scatter3d(
-            x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBL_1'][idx],
+            x=[df['posNED_m_1'][idx]+camera_ray_length*df['fovBLUnitVector_1'][idx],
                df['posNED_m_1'][idx],
-               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBR_1'][idx]],
-            y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBL_0'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['fovBRUnitVector_1'][idx]],
+            y=[df['posNED_m_0'][idx]+camera_ray_length*df['fovBLUnitVector_0'][idx],
                df['posNED_m_0'][idx],
-               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBR_0'][idx]],
-            z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBL_2'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['fovBRUnitVector_0'][idx]],
+            z=[-df['posNED_m_2'][idx]-camera_ray_length*df['fovBLUnitVector_2'][idx],
                -df['posNED_m_2'][idx],
-               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBR_2'][idx]],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['fovBRUnitVector_2'][idx]],
             name='frame_camera_B',
             mode='lines',
             line=dict(color="black", width=2)
         )
         scatter3d_camera_boundary = go.Scatter3d(
-            x=[df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx],
-               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUR_1'][idx],
-               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBR_1'][idx],
-               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorBL_1'][idx],
-               df['posNED_m_1'][idx]+camera_ray_length*df['gimbalUnitVectorUL_1'][idx]],
-            y=[df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx],
-               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUR_0'][idx],
-               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBR_0'][idx],
-               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorBL_0'][idx],
-               df['posNED_m_0'][idx]+camera_ray_length*df['gimbalUnitVectorUL_0'][idx]],
-            z=[-df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx],
-               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUR_2'][idx],
-               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBR_2'][idx],
-               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorBL_2'][idx],
-               -df['posNED_m_2'][idx]-camera_ray_length*df['gimbalUnitVectorUL_2'][idx]],
+            x=[df['posNED_m_1'][idx]+camera_ray_length*df['fovULUnitVector_1'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['fovURUnitVector_1'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['fovBRUnitVector_1'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['fovBLUnitVector_1'][idx],
+               df['posNED_m_1'][idx]+camera_ray_length*df['fovULUnitVector_1'][idx]],
+            y=[df['posNED_m_0'][idx]+camera_ray_length*df['fovULUnitVector_0'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['fovURUnitVector_0'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['fovBRUnitVector_0'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['fovBLUnitVector_0'][idx],
+               df['posNED_m_0'][idx]+camera_ray_length*df['fovULUnitVector_0'][idx]],
+            z=[-df['posNED_m_2'][idx]-camera_ray_length*df['fovULUnitVector_2'][idx],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['fovURUnitVector_2'][idx],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['fovBRUnitVector_2'][idx],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['fovBLUnitVector_2'][idx],
+               -df['posNED_m_2'][idx]-camera_ray_length*df['fovULUnitVector_2'][idx]],
             name='frame_camera_boundary',
             mode='lines',
             line=dict(color="black", width=4)

@@ -141,7 +141,13 @@ app.layout = html.Div([
             'display': 'inline'
     }
     ),
-    html.Hr(),
+    html.Hr(style={
+            'margin-bottom': '1.5rem'
+    }),
+    html.Div(
+        id='output_log_status',
+        children=''
+    ),
     dcc.Tabs([
         dcc.Tab(label='2D Data Plot', children=[
             html.Label([
@@ -220,6 +226,11 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
     strNames = ''
     strDates = ''
     strDecoded = ''
+    strFcLogVersion = ''
+    strFcType = ''
+    strUAVModel = ''
+    strIsSim = ''
+    strMissionType = ''
     for contents, filename, date in zip(list_of_contents, list_of_names, list_of_dates):
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
@@ -236,7 +247,8 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 try:
                     with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
                         if chr(decoded[0]) == 'n':
-                            print("New_Format v" + str(decoded[1]))
+                            strFcLogVersion = str(decoded[1])
+                            print("New_Format v" + strFcLogVersion)
                             FcLogHeaderSize = decoded[3] << 8 | decoded[2]
                             FcLogTypeListSize = decoded[5] << 8 | decoded[4]
                             FcLogDataSize = decoded[7] << 8 | decoded[6]
@@ -281,7 +293,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 if len(df) > 0:
                     # Ignore data before 2020 January 1st Wednesday AM 1:00:00
                     df = df[df['rosTime'] > 1577840400]
-                    df = df.drop([0])  # delete data with initial value # TODO: change code to be reliable
+                    df = df.drop([0])  # delete data with initial value
                     df = df.dropna(axis=0)  # delete data with NaN
                     df = df.reset_index(drop=True)
                     df.columns = df.columns.str.strip()
@@ -349,6 +361,26 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     fcMcMode_value = df.iloc[fcMcMode_index].strFcMcMode.tolist()
                     fcMcMode_color = df.iloc[fcMcMode_index].colorFcMcMode.tolist()
 
+                if 'fcType' in df.columns:
+                    listFcType = ['Mockup', 'DJI', 'PX4']
+                    strFcType = listFcType[df.fcType[0]]
+
+                if 'UAVModel' in df.columns:
+                    listUAVModel = ['M600', 'M210', 'M300', 'PX4']
+                    strUAVModel = listUAVModel[df.UAVModel[0]]
+
+                if 'IsSim' in df.columns:
+                    listIsSim = ['False', 'True']
+                    strIsSim = listIsSim[df.IsSim[0]]
+
+                if 'missionType' in df.columns:
+                    listMissionType = ['MISSION_TYPE_5_1', 'MISSION_TYPE_5_2', 'MISSION_TYPE_4_1',
+                                       'MISSION_TYPE_4_2', 'MISSION_TYPE_4_3', 'MISSION_TYPE_WP',
+                                       'MISSION_TYPE_3_1', 'MISSION_TYPE_3_2', 'MISSION_TYPE_6_1',
+                                       'MISSION_TYPE_6_2', 'MISSION_TYPE_6_1_SP', 'MISSION_TYPE_6_2_SP',
+                                       'MISSION_TYPE_HI']
+                    strMissionType = listMissionType[df.missionType[fcMcMode_index[fcMcMode_value.index('Guide')]]]
+
                 if 'jobType' in df.columns:
                     df.loc[df.jobType == 0, 'strJobType'] = 'INIT'
                     df.loc[df.jobType == 1, 'strJobType'] = 'STANDARD'
@@ -365,21 +397,6 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df.loc[df.jobType == 12, 'strJobType'] = 'HOPPINGBLADESURFACE'
                     df.loc[df.jobType == 13, 'strJobType'] = 'BLADEFOLLOWING'
                     df.loc[df.jobType == 255, 'strJobType'] = 'NONE'
-
-                if 'missionType' in df.columns:
-                    df.loc[df.missionType == 0, 'strMissionType'] = 'MISSION_TYPE_5_1'
-                    df.loc[df.missionType == 1, 'strMissionType'] = 'MISSION_TYPE_5_2'
-                    df.loc[df.missionType == 2, 'strMissionType'] = 'MISSION_TYPE_4_1'
-                    df.loc[df.missionType == 3, 'strMissionType'] = 'MISSION_TYPE_4_2'
-                    df.loc[df.missionType == 4, 'strMissionType'] = 'MISSION_TYPE_4_3'
-                    df.loc[df.missionType == 5, 'strMissionType'] = 'MISSION_TYPE_WP'
-                    df.loc[df.missionType == 6, 'strMissionType'] = 'MISSION_TYPE_3_1'
-                    df.loc[df.missionType == 7, 'strMissionType'] = 'MISSION_TYPE_3_2'
-                    df.loc[df.missionType == 8, 'strMissionType'] = 'MISSION_TYPE_6_1'
-                    df.loc[df.missionType == 9, 'strMissionType'] = 'MISSION_TYPE_6_2'
-                    df.loc[df.missionType == 10, 'strMissionType'] = 'MISSION_TYPE_6_1_SP'
-                    df.loc[df.missionType == 11, 'strMissionType'] = 'MISSION_TYPE_6_2_SP'
-                    df.loc[df.missionType == 12, 'strMissionType'] = 'MISSION_TYPE_HI'
 
                 if 'gpsFix' in df.columns:
                     df.loc[df.gpsFix == 0, 'strGpsFix'] = 'No_GPS'
@@ -462,11 +479,26 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
             strDecoded = strDecoded + str(decoded[0:100]) + '...\n'
         except Exception as e:
             print('[parse_contents::make_string] ' + str(e))
+        try:
+            childrenLogStatus = html.P(
+                children=['[FcLogVersion] ㅤ',
+                          html.B(strFcLogVersion),
+                          ' ㅤㅤㅤㅤ [fcType] ㅤ',
+                          html.B(strFcType),
+                          ' ㅤㅤㅤㅤ [UAVModel] ㅤ',
+                          html.B(strUAVModel),
+                          ' ㅤㅤㅤㅤ [IsSim] ㅤ',
+                          html.B(strIsSim),
+                          ' ㅤㅤㅤㅤ [missionType] ㅤ',
+                          html.B(strMissionType)]
+            )
+        except Exception as e:
+            print('[parse_contents::make_log_status] ' + str(e))
         confirm_msg = '[Parsing Log]\n' + parsing_log + \
                       '\n[File Names]\n' + strNames + \
                       '\n[Raw Contents]\n' + strDecoded + \
                       '\n[Do you want to use only the Guide/Auto Data?]\n'
-    return confirm_msg, df_header_list_sorted
+    return confirm_msg, df_header_list_sorted, childrenLogStatus
 
 
 @app.callback(
@@ -474,6 +506,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
     Output('io_data_dropdown_2', 'options'),
     Output('confirm_parsing_data', 'displayed'),
     Output('confirm_parsing_data', 'message'),
+    Output('output_log_status', 'children'),
     Input('input_upload_data', 'contents'),
     State('input_upload_data', 'filename'),
     State('input_upload_data', 'last_modified')
@@ -481,11 +514,11 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
     global df
     if list_of_contents is not None:
-        confirm_msg, df_header_list_sorted = \
+        confirm_msg, df_header_list_sorted, childrenLogStatus = \
             parse_contents(list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
-        return options, options, True, confirm_msg
+        return options, options, True, confirm_msg, childrenLogStatus
 
 
 @app.callback(
@@ -567,7 +600,7 @@ def update_graph_data(df_header, df_header_2,
 
     if prev_mission_clicks != mission_clicks:
         df_header = ['jobSeq']
-        df_header_2 = ['strJobType', 'strMissionType']
+        df_header_2 = ['strJobType']
         prev_mission_clicks = mission_clicks
     elif prev_gps_clicks != gps_clicks:
         df_header = ['nSat', 'gpsNSV']
