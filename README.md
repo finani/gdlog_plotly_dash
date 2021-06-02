@@ -14,7 +14,7 @@
 
 ```python3 general_plotter.py```
 
-> If you want ot change Dash IP address
+> If you want to change Dash IP address,
 ```python3 gdlog_plotter.py 10.10.150.22```
 
 3. Open the web browser
