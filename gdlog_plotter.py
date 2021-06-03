@@ -891,7 +891,7 @@ def make_plots_per_one_frame(df, idx):
             x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+drone_axes_length*df['unitVectorD_1'][idx]],
             y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+drone_axes_length*df['unitVectorD_0'][idx]],
             z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-drone_axes_length*df['unitVectorD_2'][idx]],
-            name='frame_drone_U',
+            name='frame_drone_D',
             mode='lines',
             line=dict(color="blue", width=10)
         )
@@ -923,7 +923,7 @@ def make_plots_per_one_frame(df, idx):
             x=[df['posNED_m_1'][idx], df['posNED_m_1'][idx]+gimbal_axes_length*df['gimbalUnitVectorD_1'][idx]],
             y=[df['posNED_m_0'][idx], df['posNED_m_0'][idx]+gimbal_axes_length*df['gimbalUnitVectorD_0'][idx]],
             z=[-df['posNED_m_2'][idx], -df['posNED_m_2'][idx]-gimbal_axes_length*df['gimbalUnitVectorD_2'][idx]],
-            name='frame_camera_U',
+            name='frame_camera_D',
             mode='lines',
             line=dict(color="yellow", width=8)
         )
@@ -933,10 +933,10 @@ def make_plots_per_one_frame(df, idx):
     except Exception as e:
         print('[make_plots_per_one_frame::camera_axes] ' + str(e))
 
-    # Camera Boundaries
+    # Image Plane
     try:
-        scatter3d_camera_T = go.Scatter3d(
-            x=[df['posNED_m_1'][idx]+camera_ray_length*df['fovULUnitVector_1'][idx], # fovBRUnitVector
+        scatter3d_image_T = go.Scatter3d(
+            x=[df['posNED_m_1'][idx]+camera_ray_length*df['fovULUnitVector_1'][idx],
                df['posNED_m_1'][idx],
                df['posNED_m_1'][idx]+camera_ray_length*df['fovURUnitVector_1'][idx]],
             y=[df['posNED_m_0'][idx]+camera_ray_length*df['fovULUnitVector_0'][idx],
@@ -945,11 +945,11 @@ def make_plots_per_one_frame(df, idx):
             z=[-df['posNED_m_2'][idx]-camera_ray_length*df['fovULUnitVector_2'][idx],
                -df['posNED_m_2'][idx],
                -df['posNED_m_2'][idx]-camera_ray_length*df['fovURUnitVector_2'][idx]],
-            name='frame_camera_T',
+            name='frame_image_T',
             mode='lines',
             line=dict(color="black", width=2)
         )
-        scatter3d_camera_B = go.Scatter3d(
+        scatter3d_image_B = go.Scatter3d(
             x=[df['posNED_m_1'][idx]+camera_ray_length*df['fovBLUnitVector_1'][idx],
                df['posNED_m_1'][idx],
                df['posNED_m_1'][idx]+camera_ray_length*df['fovBRUnitVector_1'][idx]],
@@ -959,11 +959,11 @@ def make_plots_per_one_frame(df, idx):
             z=[-df['posNED_m_2'][idx]-camera_ray_length*df['fovBLUnitVector_2'][idx],
                -df['posNED_m_2'][idx],
                -df['posNED_m_2'][idx]-camera_ray_length*df['fovBRUnitVector_2'][idx]],
-            name='frame_camera_B',
+            name='frame_image_B',
             mode='lines',
             line=dict(color="black", width=2)
         )
-        scatter3d_camera_boundary = go.Scatter3d(
+        scatter3d_image_plane = go.Scatter3d(
             x=[df['posNED_m_1'][idx]+camera_ray_length*df['fovULUnitVector_1'][idx],
                df['posNED_m_1'][idx]+camera_ray_length*df['fovURUnitVector_1'][idx],
                df['posNED_m_1'][idx]+camera_ray_length*df['fovBRUnitVector_1'][idx],
@@ -979,15 +979,15 @@ def make_plots_per_one_frame(df, idx):
                -df['posNED_m_2'][idx]-camera_ray_length*df['fovBRUnitVector_2'][idx],
                -df['posNED_m_2'][idx]-camera_ray_length*df['fovBLUnitVector_2'][idx],
                -df['posNED_m_2'][idx]-camera_ray_length*df['fovULUnitVector_2'][idx]],
-            name='frame_camera_boundary',
+            name='frame_image_plane',
             mode='lines',
             line=dict(color="black", width=4)
         )
-        frame.append(scatter3d_camera_T)
-        frame.append(scatter3d_camera_B)
-        frame.append(scatter3d_camera_boundary)
+        frame.append(scatter3d_image_T)
+        frame.append(scatter3d_image_B)
+        frame.append(scatter3d_image_plane)
     except Exception as e:
-        print('[make_plots_per_one_frame::camera_boundaries] ' + str(e))
+        print('[make_plots_per_one_frame::image_plane] ' + str(e))
 
     return frame
 
