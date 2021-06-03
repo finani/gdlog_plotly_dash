@@ -50,7 +50,7 @@ app.layout = html.Div([
                 'textAlign': 'center',
                 'margin': '10px',
                 'float': 'left'},
-            multiple=True
+            multiple=False
         ),
         html.Div([
             html.A(html.Img(src=app.get_asset_url('nearthlab-logo-black-large.png'),
@@ -89,45 +89,44 @@ app.layout = html.Div([
 ])
 
 
-def parse_contents(list_of_contents, list_of_names, list_of_dates):
+def parse_contents(contents, filename, date):
     global df, df_pc, fcMcMode_index, fcMcMode_value, fcMcMode_color, \
         bin_data_length, bin_data_type, csv_header_list
     parsing_log = ''
     strNames = ''
     strDates = ''
     strDecoded = ''
-    for contents, filename, date in zip(list_of_contents, list_of_names, list_of_dates):
-        try:
-            content_type, content_string = contents.split(',')
-            decoded = base64.b64decode(content_string)
-            if 'csv' in filename:
-                df = pd.read_csv(io.StringIO(decoded.decode('utf-8')),
-                                    low_memory=False)
-                parsing_log = parsing_log + 'csv file!\n'
-            elif 'bin' in filename:
-                parsing_log = parsing_log + 'bin file! (not supported)\n'
-            elif 'xls' in filename:
-                df = pd.read_excel(io.BytesIO(decoded))
-                parsing_log = parsing_log + 'xls file!\n'
+    try:
+        content_type, content_string = contents.split(',')
+        decoded = base64.b64decode(content_string)
+        if 'csv' in filename:
+            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')),
+                                low_memory=False)
+            parsing_log = parsing_log + 'csv file!\n'
+        elif 'bin' in filename:
+            parsing_log = parsing_log + 'bin file! (not supported)\n'
+        elif 'xls' in filename:
+            df = pd.read_excel(io.BytesIO(decoded))
+            parsing_log = parsing_log + 'xls file!\n'
 
-            # dataFrame Post-Processing
-            df = df.drop([0])  # delete data with initial value
-            df = df.dropna(axis=0)  # delete data with NaN
-            df = df.reset_index(drop=True)
-            df.columns = df.columns.str.strip()
-            df_header_list_sorted = sorted(df.columns.tolist())
-            strNames = strNames + filename + '\n'
-            strDates = strDates + \
-                str(datetime.datetime.fromtimestamp(date)) + '\n'
-            strDecoded = strDecoded + str(decoded[0:100]) + '...\n'
-        except Exception as e:
-            print('[parse_contents::read_files] ' + str(e))
-            return html.Div([
-                'There was an error processing this file.'
-            ])
-        confirm_msg = '[Parsing Log]\n' + parsing_log + \
-                      '\n[File Names]\n' + strNames + \
-                      '\n[Raw Contents]\n' + strDecoded
+        # dataFrame Post-Processing
+        df = df.drop([0])  # delete data with initial value
+        df = df.dropna(axis=0)  # delete data with NaN
+        df = df.reset_index(drop=True)
+        df.columns = df.columns.str.strip()
+        df_header_list_sorted = sorted(df.columns.tolist())
+        strNames = strNames + filename + '\n'
+        strDates = strDates + \
+            str(datetime.datetime.fromtimestamp(date)) + '\n'
+        strDecoded = strDecoded + str(decoded[0:100]) + '...\n'
+    except Exception as e:
+        print('[parse_contents::read_files] ' + str(e))
+        return html.Div([
+            'There was an error processing this file.'
+        ])
+    confirm_msg = '[Parsing Log]\n' + parsing_log + \
+                    '\n[File Names]\n' + strNames + \
+                    '\n[Raw Contents]\n' + strDecoded
     return confirm_msg, df_header_list_sorted
 
 
@@ -140,11 +139,11 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
     State('input_upload_data', 'filename'),
     State('input_upload_data', 'last_modified')
 )
-def update_data_upload(list_of_contents, list_of_names, list_of_dates):
+def update_data_upload(contents, filename, date):
     global df
-    if list_of_contents is not None:
+    if contents is not None:
         confirm_msg, df_header_list_sorted = \
-            parse_contents(list_of_contents, list_of_names, list_of_dates)
+            parse_contents(contents, filename, date)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
         return options, options, True, confirm_msg
