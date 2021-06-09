@@ -150,59 +150,77 @@ app.layout = html.Div([
     ),
     dcc.Tabs([
         dcc.Tab(label='2D Data Plot', children=[
-            html.Label([
-                dcc.Dropdown(
-                    id='io_data_dropdown',
-                    multi=True,
-                    placeholder="Select Data"
-                ),
+            html.Div([
+                html.Label([
+                    dcc.Dropdown(
+                        id='io_data_dropdown',
+                        multi=True,
+                        placeholder="Select Data"
+                    ),
+                ]),
+                html.Label([
+                    dcc.Dropdown(
+                        id='io_data_dropdown_2',
+                        multi=True,
+                        placeholder="Select Data"
+                    )
+                ])]
+            ),
+            html.Div([
+                html.Button('mission',
+                            id='input_mission_button',
+                            n_clicks=0,
+                            style={'background-color': 'mistyrose'}),
+                html.Button('gps',
+                            id='input_gps_button',
+                            n_clicks=0,
+                            style={'background-color': 'mistyrose'}),
+                html.Button('rpd_roll',
+                            id='input_rpd_roll_button',
+                            n_clicks=0,
+                            style={'background-color': 'honeydew'}),
+                html.Button('rpd_pitch',
+                            id='input_rpd_pitch_button',
+                            n_clicks=0,
+                            style={'background-color': 'honeydew'}),
+                html.Button('rpd_down',
+                            id='input_rpd_down_button',
+                            n_clicks=0,
+                            style={'background-color': 'honeydew'}),
+                html.Button('yaw',
+                            id='input_yaw_button',
+                            n_clicks=0,
+                            style={'background-color': 'lavenderblush'}),
+                html.Button('vel_u',
+                            id='input_vel_u_button',
+                            n_clicks=0,
+                            style={'background-color': 'cornsilk'}),
+                html.Button('vel_v',
+                            id='input_vel_v_button',
+                            n_clicks=0,
+                            style={'background-color': 'cornsilk'}),
+                html.Button('vel_w',
+                            id='input_vel_w_button',
+                            n_clicks=0,
+                            style={'background-color': 'cornsilk'}),
+                html.Button('pos_n',
+                            id='input_pos_n_button',
+                            n_clicks=0,
+                            style={'background-color': 'azure'}),
+                html.Button('pos_e',
+                            id='input_pos_e_button',
+                            n_clicks=0,
+                            style={'background-color': 'azure'}),
+                html.Button('pos_d',
+                            id='input_pos_d_button',
+                            n_clicks=0,
+                            style={'background-color': 'azure'}),
+                html.Button('slide_ranger: true',
+                            id='input_slide_ranger_button',
+                            n_clicks=0,
+                            style={'float': 'right',
+                                   'background-color': 'turquoise'})
             ]),
-            html.Label([
-                dcc.Dropdown(
-                    id='io_data_dropdown_2',
-                    multi=True,
-                    placeholder="Select Data"
-                )
-            ]),
-            html.Button('mission',
-                        id='input_mission_button',
-                        n_clicks=0),
-            html.Button('gps',
-                        id='input_gps_button',
-                        n_clicks=0),
-            html.Button('rpd_roll',
-                        id='input_rpd_roll_button',
-                        n_clicks=0),
-            html.Button('rpd_pitch',
-                        id='input_rpd_pitch_button',
-                        n_clicks=0),
-            html.Button('rpd_down',
-                        id='input_rpd_down_button',
-                        n_clicks=0),
-            html.Button('vel_u',
-                        id='input_vel_u_button',
-                        n_clicks=0),
-            html.Button('vel_v',
-                        id='input_vel_v_button',
-                        n_clicks=0),
-            html.Button('vel_w',
-                        id='input_vel_w_button',
-                        n_clicks=0),
-            html.Button('pos_n',
-                        id='input_pos_n_button',
-                        n_clicks=0),
-            html.Button('pos_e',
-                        id='input_pos_e_button',
-                        n_clicks=0),
-            html.Button('pos_d',
-                        id='input_pos_d_button',
-                        n_clicks=0),
-            html.Button('slide_ranger: true',
-                        id='input_slide_ranger_button',
-                        n_clicks=0,
-                        style={
-                            'float': 'right'
-                        }),
             dcc.Graph(id='graph_go')
         ]),
         dcc.Tab(label='3D Data Plot', children=[
@@ -580,6 +598,7 @@ def update_graph_data(prev_slide_ranger_children, slide_ranger_clicks):
     Input('input_rpd_roll_button', 'n_clicks'),
     Input('input_rpd_pitch_button', 'n_clicks'),
     Input('input_rpd_down_button', 'n_clicks'),
+    Input('input_yaw_button', 'n_clicks'),
     Input('input_vel_u_button', 'n_clicks'),
     Input('input_vel_v_button', 'n_clicks'),
     Input('input_vel_w_button', 'n_clicks'),
@@ -590,11 +609,13 @@ def update_graph_data(prev_slide_ranger_children, slide_ranger_clicks):
 def update_graph_data(df_header, df_header_2,
                       mission_clicks, gps_clicks,
                       rpd_roll_clicks, rpd_pitch_clicks, rpd_down_clicks,
+                      yaw_clicks,
                       vel_u_clicks, vel_v_clicks, vel_w_clicks,
                       pos_n_clicks, pos_e_clicks, pos_d_clicks):
     global df, fcMcMode_index, fcMcMode_value, fcMcMode_color
     global prev_mission_clicks, prev_gps_clicks
     global prev_rpd_roll_clicks, prev_rpd_pitch_clicks, prev_rpd_down_clicks
+    global prev_yaw_clicks
     global prev_vel_u_clicks, prev_vel_v_clicks, prev_vel_w_clicks
     global prev_pos_n_clicks, prev_pos_e_clicks, prev_pos_d_clicks
 
@@ -618,6 +639,10 @@ def update_graph_data(df_header, df_header_2,
         df_header = ['velUVW_mps_2', 'velCmdUVW_mps_2']
         df_header_2 = ['strCtrlStruct']
         prev_rpd_down_clicks = rpd_down_clicks
+    elif prev_yaw_clicks != yaw_clicks:
+        df_header = ['rpy_deg_2', 'yawSp_deg']
+        df_header_2 = ['strCtrlStruct']
+        prev_yaw_clicks = yaw_clicks
     elif prev_vel_u_clicks != vel_u_clicks:
         df_header = ['velUVW_mps_0', 'velCmdUVW_mps_0']
         df_header_2 = ['strCtrlStruct']
