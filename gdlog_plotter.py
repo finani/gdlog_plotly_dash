@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import signal
 import base64
@@ -34,6 +35,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets,
 
 df = pd.DataFrame()
 df_pc = pd.DataFrame()
+df_lidar = pd.DataFrame(columns=['pos_0','pos_1','pos_2','frameIdx'])
 fcMcMode_index = []
 fcMcMode_value = []
 fcMcMode_color = []
@@ -43,6 +45,7 @@ prev_gps_clicks = 0
 prev_rpd_roll_clicks = 0
 prev_rpd_pitch_clicks = 0
 prev_rpd_down_clicks = 0
+prev_yaw_clicks = 0
 prev_vel_u_clicks = 0
 prev_vel_v_clicks = 0
 prev_vel_w_clicks = 0
@@ -51,6 +54,7 @@ prev_pos_e_clicks = 0
 prev_pos_d_clicks = 0
 prev_submit_clicks = 0
 prev_slide_ranger_clicks = 0
+prev_path_upload_clicks = 0
 
 slide_ranger_toggle = True
 animation_step_size = 50
@@ -106,6 +110,7 @@ csv_header_list = ['rosTime', 'flightMode', 'ctrlDeviceStatus',
                    'bladeTravelDistance',
                    'trajTimeCur', 'trajTimeMax', 'pad_1', 'pad_2', 'pad_3', 'pad_4']
 
+
 app.layout = html.Div([
     html.Div([
         dcc.ConfirmDialog(
@@ -152,68 +157,99 @@ app.layout = html.Div([
     ),
     dcc.Tabs([
         dcc.Tab(label='2D Data Plot', children=[
-            html.Label([
-                dcc.Dropdown(
-                    id='io_data_dropdown',
-                    multi=True,
-                    placeholder="Select Data"
-                ),
+            html.Div([
+                html.Label([
+                    dcc.Dropdown(
+                        id='io_data_dropdown',
+                        multi=True,
+                        placeholder="Select Data"
+                    ),
+                ]),
+                html.Label([
+                    dcc.Dropdown(
+                        id='io_data_dropdown_2',
+                        multi=True,
+                        placeholder="Select Data"
+                    )
+                ])]
+            ),
+            html.Div([
+                html.Button('mission',
+                            id='input_mission_button',
+                            n_clicks=0,
+                            style={'background-color': 'mistyrose'}),
+                html.Button('gps',
+                            id='input_gps_button',
+                            n_clicks=0,
+                            style={'background-color': 'mistyrose'}),
+                html.Button('rpd_roll',
+                            id='input_rpd_roll_button',
+                            n_clicks=0,
+                            style={'background-color': 'honeydew'}),
+                html.Button('rpd_pitch',
+                            id='input_rpd_pitch_button',
+                            n_clicks=0,
+                            style={'background-color': 'honeydew'}),
+                html.Button('rpd_down',
+                            id='input_rpd_down_button',
+                            n_clicks=0,
+                            style={'background-color': 'honeydew'}),
+                html.Button('yaw',
+                            id='input_yaw_button',
+                            n_clicks=0,
+                            style={'background-color': 'lavenderblush'}),
+                html.Button('vel_u',
+                            id='input_vel_u_button',
+                            n_clicks=0,
+                            style={'background-color': 'cornsilk'}),
+                html.Button('vel_v',
+                            id='input_vel_v_button',
+                            n_clicks=0,
+                            style={'background-color': 'cornsilk'}),
+                html.Button('vel_w',
+                            id='input_vel_w_button',
+                            n_clicks=0,
+                            style={'background-color': 'cornsilk'}),
+                html.Button('pos_n',
+                            id='input_pos_n_button',
+                            n_clicks=0,
+                            style={'background-color': 'azure'}),
+                html.Button('pos_e',
+                            id='input_pos_e_button',
+                            n_clicks=0,
+                            style={'background-color': 'azure'}),
+                html.Button('pos_d',
+                            id='input_pos_d_button',
+                            n_clicks=0,
+                            style={'background-color': 'azure'}),
+                html.Button('slide_ranger: true',
+                            id='input_slide_ranger_button',
+                            n_clicks=0,
+                            style={'float': 'right',
+                                   'background-color': 'turquoise'})
             ]),
-            html.Label([
-                dcc.Dropdown(
-                    id='io_data_dropdown_2',
-                    multi=True,
-                    placeholder="Select Data"
-                )
-            ]),
-            html.Button('mission',
-                        id='input_mission_button',
-                        n_clicks=0),
-            html.Button('gps',
-                        id='input_gps_button',
-                        n_clicks=0),
-            html.Button('rpd_roll',
-                        id='input_rpd_roll_button',
-                        n_clicks=0),
-            html.Button('rpd_pitch',
-                        id='input_rpd_pitch_button',
-                        n_clicks=0),
-            html.Button('rpd_down',
-                        id='input_rpd_down_button',
-                        n_clicks=0),
-            html.Button('vel_u',
-                        id='input_vel_u_button',
-                        n_clicks=0),
-            html.Button('vel_v',
-                        id='input_vel_v_button',
-                        n_clicks=0),
-            html.Button('vel_w',
-                        id='input_vel_w_button',
-                        n_clicks=0),
-            html.Button('pos_n',
-                        id='input_pos_n_button',
-                        n_clicks=0),
-            html.Button('pos_e',
-                        id='input_pos_e_button',
-                        n_clicks=0),
-            html.Button('pos_d',
-                        id='input_pos_d_button',
-                        n_clicks=0),
-            html.Button('slide_ranger: true',
-                        id='input_slide_ranger_button',
-                        n_clicks=0,
-                        style={
-                            'float': 'right'
-                        }),
             dcc.Graph(id='graph_go')
         ]),
         dcc.Tab(label='3D Data Plot', children=[
-            dcc.Checklist(
-                id='output_select_data_checklist',
-                options=[
-                    {'label': 'Flight Path', 'value': 'Flight_Path'},
-                    {'label': 'Lidar Point Cloud', 'value': 'Lidar_PC'}],
-                labelStyle={'display': 'inline-block'}
+            html.Div([
+                dcc.Checklist(
+                    id='output_select_data_checklist',
+                    options=[
+                        {'label': 'Flight Path', 'value': 'Flight_Path'},
+                        {'label': 'Lidar Point Cloud', 'value': 'Lidar_PC'}],
+                    labelStyle={'display': 'inline-block'},
+                    style={'width': '66.7%', 
+                           'display': 'inline-block'}
+                ),
+                dcc.Input(id='input_file_path',
+                          type='text',
+                          placeholder='/home/weebee/log/150515_083000',
+                          style={'width': '23.3%'}),
+                html.Button('waiting',
+                          id='input_path_upload_button',
+                          n_clicks=0,
+                          style={'width': '10%',
+                                 'background-color': 'turquoise'})]
             ),
             dcc.Graph(id='graph_go_3d_pos')
         ]),
@@ -233,41 +269,56 @@ app.layout = html.Div([
 ])
 
 
-def hamilton_product(df_q1_name, q2, df_q3_name):
-    if isinstance(q2, list) and (len(q2) == 3):  # v' = qvq*, [q=q1: df, v=q2: list[3], v'=q3: df], vector rotation
-        q2 = [0] + q2
-        df[df_q3_name+'_vq_0'] = q2[0]* df[df_q1_name+'_0'] - q2[1]*-df[df_q1_name+'_1'] - \
-                                 q2[2]*-df[df_q1_name+'_2'] - q2[3]*-df[df_q1_name+'_3']
-        df[df_q3_name+'_vq_1'] = q2[0]*-df[df_q1_name+'_1'] + q2[1]* df[df_q1_name+'_0'] + \
-                                 q2[2]*-df[df_q1_name+'_3'] - q2[3]*-df[df_q1_name+'_2']
-        df[df_q3_name+'_vq_2'] = q2[0]*-df[df_q1_name+'_2'] - q2[1]*-df[df_q1_name+'_3'] + \
-                                 q2[2]* df[df_q1_name+'_0'] + q2[3]*-df[df_q1_name+'_1']
-        df[df_q3_name+'_vq_3'] = q2[0]*-df[df_q1_name+'_3'] + q2[1]*-df[df_q1_name+'_2'] - \
-                                 q2[2]*-df[df_q1_name+'_1'] + q2[3]* df[df_q1_name+'_0']
+def hamilton_product(df, df_q1_name, df_q2_name, df_q3_name):
+    if isinstance(df_q2_name, list) and (len(df_q2_name) == 3):  # v' = qvq*, [q=q1: df, v=q2: list[3], v'=q3: df], vector rotation
+        df_q2_name = [0] + df_q2_name
+        df[df_q3_name+'_vq_0'] = df_q2_name[0]* df[df_q1_name+'_0'] - df_q2_name[1]*-df[df_q1_name+'_1'] - \
+                                 df_q2_name[2]*-df[df_q1_name+'_2'] - df_q2_name[3]*-df[df_q1_name+'_3']
+        df[df_q3_name+'_vq_1'] = df_q2_name[0]*-df[df_q1_name+'_1'] + df_q2_name[1]* df[df_q1_name+'_0'] + \
+                                 df_q2_name[2]*-df[df_q1_name+'_3'] - df_q2_name[3]*-df[df_q1_name+'_2']
+        df[df_q3_name+'_vq_2'] = df_q2_name[0]*-df[df_q1_name+'_2'] - df_q2_name[1]*-df[df_q1_name+'_3'] + \
+                                 df_q2_name[2]* df[df_q1_name+'_0'] + df_q2_name[3]*-df[df_q1_name+'_1']
+        df[df_q3_name+'_vq_3'] = df_q2_name[0]*-df[df_q1_name+'_3'] + df_q2_name[1]*-df[df_q1_name+'_2'] - \
+                                 df_q2_name[2]*-df[df_q1_name+'_1'] + df_q2_name[3]* df[df_q1_name+'_0']
         df[df_q3_name+'_0'] = df[df_q1_name+'_0']*df[df_q3_name+'_vq_1'] + df[df_q1_name+'_1']*df[df_q3_name+'_vq_0'] + \
                               df[df_q1_name+'_2']*df[df_q3_name+'_vq_3'] - df[df_q1_name+'_3']*df[df_q3_name+'_vq_2']
         df[df_q3_name+'_1'] = df[df_q1_name+'_0']*df[df_q3_name+'_vq_2'] - df[df_q1_name+'_1']*df[df_q3_name+'_vq_3'] + \
                               df[df_q1_name+'_2']*df[df_q3_name+'_vq_0'] + df[df_q1_name+'_3']*df[df_q3_name+'_vq_1']
         df[df_q3_name+'_2'] = df[df_q1_name+'_0']*df[df_q3_name+'_vq_3'] + df[df_q1_name+'_1']*df[df_q3_name+'_vq_2'] - \
                               df[df_q1_name+'_2']*df[df_q3_name+'_vq_1'] + df[df_q1_name+'_3']*df[df_q3_name+'_vq_0']
-    elif isinstance(q2, list) and (len(q2) == 4):  # q3 = hamilton_product(q1,q2), [q1: df, q2: list[4]]
-        df[df_q3_name+'_0'] = df[df_q1_name+'_0']*q2[0] - df[df_q1_name+'_1']*q2[1] - \
-                              df[df_q1_name+'_2']*q2[2] - df[df_q1_name+'_3']*q2[3]
-        df[df_q3_name+'_1'] = df[df_q1_name+'_0']*q2[1] + df[df_q1_name+'_1']*q2[0] + \
-                              df[df_q1_name+'_2']*q2[3] - df[df_q1_name+'_3']*q2[2]
-        df[df_q3_name+'_2'] = df[df_q1_name+'_0']*q2[2] - df[df_q1_name+'_1']*q2[3] + \
-                              df[df_q1_name+'_2']*q2[0] + df[df_q1_name+'_3']*q2[1]
-        df[df_q3_name+'_3'] = df[df_q1_name+'_0']*q2[3] + df[df_q1_name+'_1']*q2[2] - \
-                              df[df_q1_name+'_2']*q2[1] + df[df_q1_name+'_3']*q2[0]
+    elif isinstance(df_q1_name, list) and (len(df_q1_name) == 4):  # v' = qvq*, [q=q1: list[4], v=q2: df, v'=q3: df], vector rotation
+        df[df_q3_name+'_vq_0'] =                                    - df[df_q2_name+'_0']*-df_q1_name[1] - \
+                                 df[df_q2_name+'_1']*-df_q1_name[2] - df[df_q2_name+'_2']*-df_q1_name[3]
+        df[df_q3_name+'_vq_1'] =                                      df[df_q2_name+'_0']* df_q1_name[0] + \
+                                 df[df_q2_name+'_1']*-df_q1_name[3] - df[df_q2_name+'_2']*-df_q1_name[2]
+        df[df_q3_name+'_vq_2'] =                                    - df[df_q2_name+'_0']*-df_q1_name[3] + \
+                                 df[df_q2_name+'_1']* df_q1_name[0] + df[df_q2_name+'_2']*-df_q1_name[1]
+        df[df_q3_name+'_vq_3'] =                                      df[df_q2_name+'_0']*-df_q1_name[2] - \
+                                 df[df_q2_name+'_1']*-df_q1_name[1] + df[df_q2_name+'_2']* df_q1_name[0]
+        df[df_q3_name+'_0'] =                                        df_q1_name[0]*df[df_q3_name+'_vq_0'] + \
+                              df_q1_name[1]*df[df_q3_name+'_vq_3'] - df_q1_name[2]*df[df_q3_name+'_vq_2']
+        df[df_q3_name+'_1'] =                                      - df_q1_name[0]*df[df_q3_name+'_vq_3'] + \
+                              df_q1_name[1]*df[df_q3_name+'_vq_0'] + df_q1_name[2]*df[df_q3_name+'_vq_1']
+        df[df_q3_name+'_2'] =                                        df_q1_name[0]*df[df_q3_name+'_vq_2'] - \
+                              df_q1_name[1]*df[df_q3_name+'_vq_1'] + df_q1_name[2]*df[df_q3_name+'_vq_0']
+    elif isinstance(df_q2_name, list) and (len(df_q2_name) == 4):  # q3 = hamilton_product(q1,q2), [q1: df, q2: list[4]]
+        df[df_q3_name+'_0'] = df[df_q1_name+'_0']*df_q2_name[0] - df[df_q1_name+'_1']*df_q2_name[1] - \
+                              df[df_q1_name+'_2']*df_q2_name[2] - df[df_q1_name+'_3']*df_q2_name[3]
+        df[df_q3_name+'_1'] = df[df_q1_name+'_0']*df_q2_name[1] + df[df_q1_name+'_1']*df_q2_name[0] + \
+                              df[df_q1_name+'_2']*df_q2_name[3] - df[df_q1_name+'_3']*df_q2_name[2]
+        df[df_q3_name+'_2'] = df[df_q1_name+'_0']*df_q2_name[2] - df[df_q1_name+'_1']*df_q2_name[3] + \
+                              df[df_q1_name+'_2']*df_q2_name[0] + df[df_q1_name+'_3']*df_q2_name[1]
+        df[df_q3_name+'_3'] = df[df_q1_name+'_0']*df_q2_name[3] + df[df_q1_name+'_1']*df_q2_name[2] - \
+                              df[df_q1_name+'_2']*df_q2_name[1] + df[df_q1_name+'_3']*df_q2_name[0]
     else:  # q3 = hamilton_product(q1,q2), [q1: df, q2: df]
-        df[df_q3_name+'_0'] = df[df_q1_name+'_0']*df[q2+'_0'] - df[df_q1_name+'_1']*df[q2+'_1'] - \
-                              df[df_q1_name+'_2']*df[q2+'_2'] - df[df_q1_name+'_3']*df[q2+'_3']
-        df[df_q3_name+'_1'] = df[df_q1_name+'_0']*df[q2+'_1'] + df[df_q1_name+'_1']*df[q2+'_0'] + \
-                              df[df_q1_name+'_2']*df[q2+'_3'] - df[df_q1_name+'_3']*df[q2+'_2']
-        df[df_q3_name+'_2'] = df[df_q1_name+'_0']*df[q2+'_2'] - df[df_q1_name+'_1']*df[q2+'_3'] + \
-                              df[df_q1_name+'_2']*df[q2+'_0'] + df[df_q1_name+'_3']*df[q2+'_1']
-        df[df_q3_name+'_3'] = df[df_q1_name+'_0']*df[q2+'_3'] + df[df_q1_name+'_1']*df[q2+'_2'] - \
-                              df[df_q1_name+'_2']*df[q2+'_1'] + df[df_q1_name+'_3']*df[q2+'_0']
+        df[df_q3_name+'_0'] = df[df_q1_name+'_0']*df[df_q2_name+'_0'] - df[df_q1_name+'_1']*df[df_q2_name+'_1'] - \
+                              df[df_q1_name+'_2']*df[df_q2_name+'_2'] - df[df_q1_name+'_3']*df[df_q2_name+'_3']
+        df[df_q3_name+'_1'] = df[df_q1_name+'_0']*df[df_q2_name+'_1'] + df[df_q1_name+'_1']*df[df_q2_name+'_0'] + \
+                              df[df_q1_name+'_2']*df[df_q2_name+'_3'] - df[df_q1_name+'_3']*df[df_q2_name+'_2']
+        df[df_q3_name+'_2'] = df[df_q1_name+'_0']*df[df_q2_name+'_2'] - df[df_q1_name+'_1']*df[df_q2_name+'_3'] + \
+                              df[df_q1_name+'_2']*df[df_q2_name+'_0'] + df[df_q1_name+'_3']*df[df_q2_name+'_1']
+        df[df_q3_name+'_3'] = df[df_q1_name+'_0']*df[df_q2_name+'_3'] + df[df_q1_name+'_1']*df[df_q2_name+'_2'] - \
+                              df[df_q1_name+'_2']*df[df_q2_name+'_1'] + df[df_q1_name+'_3']*df[df_q2_name+'_0']
     return 0
 
 
@@ -422,11 +473,11 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
 
                 if 'quat_0' in df.columns:
                     norm_df('quat', 4, 'normQuat')
-                    hamilton_product('quat', [1,0,0], 'unitVectorN')
-                    hamilton_product('quat', [0,1,0], 'unitVectorE')
-                    hamilton_product('quat', [0,0,1], 'unitVectorD')
+                    hamilton_product(df, 'quat', [1,0,0], 'unitVectorN')
+                    hamilton_product(df, 'quat', [0,1,0], 'unitVectorE')
+                    hamilton_product(df, 'quat', [0,0,1], 'unitVectorD')
 
-                if 'gimbalRpy_deg_0' in df.columns:
+                if 'gimbalRpy_deg_0' in df.columns: # TODO: 321 -> 312
                     sin_half_gimbal_roll = np.sin(np.deg2rad(df['gimbalRpy_deg_0'])/2.0)
                     cos_half_gimbal_roll = np.cos(np.deg2rad(df['gimbalRpy_deg_0'])/2.0)
                     sin_half_gimbal_pitch = np.sin(np.deg2rad(df['gimbalRpy_deg_1'])/2.0)
@@ -463,7 +514,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     fovBLQuat[3] = -fovBLQuat[3]
 
                     if ('IsSim' in df.columns) and (df.IsSim[0] == 1): # Simulation Flight
-                        hamilton_product('quat', 'gimbalQuat', 'bodyGimbalQuat')
+                        hamilton_product(df, 'quat', 'gimbalQuat', 'bodyGimbalQuat')
                         norm_df('bodyGimbalQuat', 4, 'normBodyGimbalQuat')
                         df['gimbalQuatI_0'] = df['bodyGimbalQuat_0']
                         df['gimbalQuatI_1'] = df['bodyGimbalQuat_1']
@@ -475,19 +526,19 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                         df['gimbalQuatI_2'] = df['gimbalQuat_2']
                         df['gimbalQuatI_3'] = df['gimbalQuat_3']
 
-                    hamilton_product('gimbalQuatI', [1,0,0], 'gimbalUnitVectorN')
-                    hamilton_product('gimbalQuatI', [0,1,0], 'gimbalUnitVectorE')
-                    hamilton_product('gimbalQuatI', [0,0,1], 'gimbalUnitVectorD')
+                    hamilton_product(df, 'gimbalQuatI', [1,0,0], 'gimbalUnitVectorN')
+                    hamilton_product(df, 'gimbalQuatI', [0,1,0], 'gimbalUnitVectorE')
+                    hamilton_product(df, 'gimbalQuatI', [0,0,1], 'gimbalUnitVectorD')
 
-                    hamilton_product('gimbalQuatI', fovURQuat, 'bodyGimbalFovURQuat')
-                    hamilton_product('gimbalQuatI', fovULQuat, 'bodyGimbalFovULQuat')
-                    hamilton_product('gimbalQuatI', fovBRQuat, 'bodyGimbalFovBRQuat')
-                    hamilton_product('gimbalQuatI', fovBLQuat, 'bodyGimbalFovBLQuat')
+                    hamilton_product(df, 'gimbalQuatI', fovURQuat, 'bodyGimbalFovURQuat')
+                    hamilton_product(df, 'gimbalQuatI', fovULQuat, 'bodyGimbalFovULQuat')
+                    hamilton_product(df, 'gimbalQuatI', fovBRQuat, 'bodyGimbalFovBRQuat')
+                    hamilton_product(df, 'gimbalQuatI', fovBLQuat, 'bodyGimbalFovBLQuat')
 
-                    hamilton_product('bodyGimbalFovURQuat', [1,0,0], 'fovURUnitVector')
-                    hamilton_product('bodyGimbalFovULQuat', [1,0,0], 'fovULUnitVector')
-                    hamilton_product('bodyGimbalFovBRQuat', [1,0,0], 'fovBRUnitVector')
-                    hamilton_product('bodyGimbalFovBLQuat', [1,0,0], 'fovBLUnitVector')
+                    hamilton_product(df, 'bodyGimbalFovURQuat', [1,0,0], 'fovURUnitVector')
+                    hamilton_product(df, 'bodyGimbalFovULQuat', [1,0,0], 'fovULUnitVector')
+                    hamilton_product(df, 'bodyGimbalFovBRQuat', [1,0,0], 'fovBRUnitVector')
+                    hamilton_product(df, 'bodyGimbalFovBLQuat', [1,0,0], 'fovBLUnitVector')
 
                 if 'fcMcMode' in df.columns:
                     df.loc[df.fcMcMode == 0, 'strFcMcMode'] = 'RC'
@@ -660,13 +711,75 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
     State('input_upload_data', 'last_modified')
 )
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
-    global df
     if list_of_contents is not None:
-        confirm_msg, df_header_list_sorted, childrenLogStatus = \
+        confirm_msg, df_header_list_sorted, children_LogStatus = \
             parse_contents(list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
-        return options, options, True, confirm_msg, childrenLogStatus
+        return options, options, True, confirm_msg, children_LogStatus
+
+
+@app.callback(
+    Output('input_path_upload_button', 'children'),
+    Input('input_path_upload_button', 'n_clicks'),
+    Input('input_file_path', 'value')
+)
+def update_data_path_upload(path_upload_clicks, path_upload):
+    global df, df_lidar, animation_step_size
+    global prev_path_upload_clicks
+
+    children_UploadOutput = 'waiting'
+    if prev_path_upload_clicks != path_upload_clicks:
+        if path_upload[-1] == '/':
+            path_upload = path_upload[0:-1]
+        dirname = path_upload+'/lidar'
+        filenames = os.listdir(dirname)
+        filenames = sorted(filenames)
+
+        if df.empty:
+            return 'no gdlog'
+        else:
+            dateTimeLidar_list = []
+            for filename in filenames:
+                rawTimeLidar = '20' + filename[0:2] + '-' + filename[2:4] + '-' + filename[4:6] + ' ' + \
+                    filename[7:9] + ':' + filename[9:11] + ':' + filename[11:13] + '.' + filename[14:17]
+                dateTimeLidar_list.append(pd.Timestamp(rawTimeLidar))
+            df_dateTimeLidar = pd.DataFrame(dateTimeLidar_list, columns=['dateTimeLidar'])
+            firstGdlogIdxFromLidarData = abs(df['dateTime'] - df_dateTimeLidar.dateTimeLidar[0]).idxmin()
+            firstGdlogIdxFromLidarDataCutBy50 = (firstGdlogIdxFromLidarData//50+1)*50
+
+            df_dateTimeLidarDiff = pd.DataFrame()
+            df_frameIdxFilenames = pd.DataFrame(columns=['frameIdx','filename'])
+            for idx in range(firstGdlogIdxFromLidarDataCutBy50, len(df), 50):
+                df_dateTimeLidarDiff['dateTimeLidar'] = df_dateTimeLidar['dateTimeLidar'] - df.dateTime[idx]
+                df_dateTimeLidarDiff = df_dateTimeLidarDiff[df_dateTimeLidarDiff['dateTimeLidar'].astype("timedelta64[ns]") > pd.Timedelta(0,'s')]
+                if not df_dateTimeLidarDiff.empty:
+                    lidarIdxSynced = df_dateTimeLidarDiff['dateTimeLidar'].idxmin()
+                    # print(str(idx) + ', ' + str(lidarIdxSynced) + ', ' + str(df_dateTimeLidar['dateTimeLidar'][lidarIdxSynced]) + ', ' + str(df.dateTime[idx]))
+                    df_frameIdxFilenames.loc[len(df_frameIdxFilenames)] = [idx, filenames[lidarIdxSynced]]
+            df_frameIdxFilenames = df_frameIdxFilenames.drop_duplicates(['filename'], keep='first').reset_index(drop=True)
+            print(df_frameIdxFilenames.head(15))
+
+            for idx in range(len(df_frameIdxFilenames)):
+                filename = df_frameIdxFilenames['filename'][idx]
+                full_filename = os.path.join(dirname, filename)
+                bin_data_type = '4f'
+                bin_data_length = struct.calcsize(bin_data_type)
+                with open(full_filename, 'rb') as f_lidar:
+                    chunk = f_lidar.read()
+                    chunk = chunk[0:len(chunk)//bin_data_length*bin_data_length]
+                    unpacked_chunk_list_total = []
+                    for unpacked_chunk in struct.iter_unpack(bin_data_type, chunk):
+                        unpacked_chunk_list = list(unpacked_chunk)
+                        unpacked_chunk_list[3] = df_frameIdxFilenames['frameIdx'][idx]
+                        unpacked_chunk_list_total.append(unpacked_chunk_list)
+                    df_lidar = df_lidar.append(pd.DataFrame(unpacked_chunk_list_total, columns=['pos_0','pos_1','pos_2','frameIdx']))
+            print(df_lidar.head(10))
+            print(df_lidar.tail(10))
+
+        children_UploadOutput = 'done'
+        prev_path_upload_clicks = path_upload_clicks
+    return children_UploadOutput
 
 
 @app.callback(
@@ -728,6 +841,7 @@ def update_graph_data(prev_slide_ranger_children, slide_ranger_clicks):
     Input('input_rpd_roll_button', 'n_clicks'),
     Input('input_rpd_pitch_button', 'n_clicks'),
     Input('input_rpd_down_button', 'n_clicks'),
+    Input('input_yaw_button', 'n_clicks'),
     Input('input_vel_u_button', 'n_clicks'),
     Input('input_vel_v_button', 'n_clicks'),
     Input('input_vel_w_button', 'n_clicks'),
@@ -738,11 +852,13 @@ def update_graph_data(prev_slide_ranger_children, slide_ranger_clicks):
 def update_graph_data(df_header, df_header_2,
                       mission_clicks, gps_clicks,
                       rpd_roll_clicks, rpd_pitch_clicks, rpd_down_clicks,
+                      yaw_clicks,
                       vel_u_clicks, vel_v_clicks, vel_w_clicks,
                       pos_n_clicks, pos_e_clicks, pos_d_clicks):
     global df, fcMcMode_index, fcMcMode_value, fcMcMode_color
     global prev_mission_clicks, prev_gps_clicks
     global prev_rpd_roll_clicks, prev_rpd_pitch_clicks, prev_rpd_down_clicks
+    global prev_yaw_clicks
     global prev_vel_u_clicks, prev_vel_v_clicks, prev_vel_w_clicks
     global prev_pos_n_clicks, prev_pos_e_clicks, prev_pos_d_clicks
 
@@ -766,6 +882,10 @@ def update_graph_data(df_header, df_header_2,
         df_header = ['velUVW_mps_2', 'velCmdUVW_mps_2']
         df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
         prev_rpd_down_clicks = rpd_down_clicks
+    elif prev_yaw_clicks != yaw_clicks:
+        df_header = ['rpy_deg_2', 'yawSp_deg']
+        df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
+        prev_yaw_clicks = yaw_clicks
     elif prev_vel_u_clicks != vel_u_clicks:
         df_header = ['velUVW_mps_0', 'velCmdUVW_mps_0']
         df_header_2 = ['strCtrlStruct', 'strCtrlSpType']
@@ -863,7 +983,7 @@ def update_graph_data(df_header, df_header_2,
     return figure, config
 
 
-def make_plots_per_one_frame(df, idx):
+def make_plots_per_one_frame(df, df_lidar, idx):
     frame = []
     drone_axes_length = 5
     gimbal_axes_length = 3
@@ -989,13 +1109,65 @@ def make_plots_per_one_frame(df, idx):
     except Exception as e:
         print('[make_plots_per_one_frame::image_plane] ' + str(e))
 
+    # Lidar PointCloud
+    try: # idx = 0,50,100,...
+        df_lidarFrame = df_lidar[df_lidar['frameIdx'] == idx] # .reset_index(drop=True)
+        # print(df_lidarFrame.head(5))
+        # print(df_lidarFrame.tail(5))
+        # scatter3d_lidar = go.Scatter3d()
+        if df_lidarFrame.empty:
+            scatter3d_lidar = go.Scatter3d(
+                x=[df['posNED_m_1'][idx]],
+                y=[df['posNED_m_0'][idx]],
+                z=[-df['posNED_m_2'][idx]],
+                name='frame_lidar',
+                # mode='lines',
+                # line=dict(color="black", width=4)
+                mode='markers',
+                marker=dict(color='black', size=3)
+            )
+            frame.append(scatter3d_lidar)
+        else: # require transform x,-z,y
+            df_lidarFrame['posBody_m_1'] = -df_lidarFrame['pos_2'] # TODO: move to upload lidar data
+            df_lidarFrame['posBody_m_0'] = df_lidarFrame['pos_0']
+            df_lidarFrame['posBody_m_2'] = df_lidarFrame['pos_1']
+            # hamilton_product(df_lidarFrame, [df['quat_0'][idx], df['quat_1'][idx], df['quat_2'][idx], df['quat_3'][idx]], 'posBody_m', 'quatPosBody_m')
+            # df_lidarFrame['posNED_m_1'] = df_lidarFrame['posBody_m_1'] + df['posNED_m_1'][idx]
+            # df_lidarFrame['posNED_m_0'] = df_lidarFrame['posBody_m_0'] + df['posNED_m_0'][idx]
+            # df_lidarFrame['posNED_m_2'] = df_lidarFrame['posBody_m_2'] + df['posNED_m_2'][idx]
+            # df_lidarFrame['posNED_m_1'] = df_lidarFrame['quatPosBody_m_1'] + df['posNED_m_1'][idx]
+            # df_lidarFrame['posNED_m_0'] = df_lidarFrame['quatPosBody_m_0'] + df['posNED_m_0'][idx]
+            # df_lidarFrame['posNED_m_2'] = df_lidarFrame['quatPosBody_m_2'] + df['posNED_m_2'][idx]
+             # TODO: Rotation Matrix to Quarternion
+            df_lidarFrame['posNED_m_1'] = df_lidarFrame['posBody_m_1'] * np.cos(np.deg2rad(df['rpy_deg_2'][idx])) + \
+                                          df_lidarFrame['posBody_m_0'] * np.sin(np.deg2rad(df['rpy_deg_2'][idx])) + \
+                                          df['posNED_m_1'][idx]
+            df_lidarFrame['posNED_m_0'] = df_lidarFrame['posBody_m_0'] * np.cos(np.deg2rad(df['rpy_deg_2'][idx])) - \
+                                          df_lidarFrame['posBody_m_1'] * np.sin(np.deg2rad(df['rpy_deg_2'][idx])) + \
+                                          df['posNED_m_0'][idx]
+            df_lidarFrame['posNED_m_2'] = df_lidarFrame['posBody_m_2'] + df['posNED_m_2'][idx]
+            scatter3d_lidar = go.Scatter3d(
+                x=df_lidarFrame['posNED_m_1'],
+                y=df_lidarFrame['posNED_m_0'],
+                z=-df_lidarFrame['posNED_m_2'],
+                name='frame_lidar',
+                # mode='lines',
+                # line=dict(color="black", width=4)
+                mode='markers',
+                marker=dict(color='black', size=3)
+            )
+            frame.append(scatter3d_lidar)
+        # frame.append(scatter3d_lidar)
+    except Exception as e:
+        print('[make_plots_per_one_frame::lidar_pointcloud] ' + str(e))
+
     return frame
 
 
-def make_frames(df, step_size):
+def make_frames(df, df_lidar, step_size):
     frames = []
     for idx in range(0, len(df), step_size):
-        cur_frame_plots = make_plots_per_one_frame(df, idx)
+        cur_frame_plots = make_plots_per_one_frame(df, df_lidar, idx)
         frames.append(go.Frame(data=cur_frame_plots,
                                name='{}'.format(idx)
                                ))
@@ -1008,7 +1180,7 @@ def make_frames(df, step_size):
     [Input("output_select_data_checklist", "value")]
 )
 def update_3d_graph_data(plot_data_value):
-    global df, animation_step_size
+    global df, df_lidar, animation_step_size
 
     steps = [dict(method='animate',
                   args=[["{}".format(k*animation_step_size)],
@@ -1043,20 +1215,27 @@ def update_3d_graph_data(plot_data_value):
                  ])]
 
     try:
-        figure_3d = go.Figure(data=make_plots_per_one_frame(df, 0),
+        figure_3d = go.Figure(data=make_plots_per_one_frame(df, df_lidar, 0),
                         layout=go.Layout(scene=dict(
                             xaxis=dict(range=[df['posNED_m_1'].min()-5, df['posNED_m_1'].max()+5], tickmode='linear', tick0=0, dtick=5),
                             yaxis=dict(range=[df['posNED_m_0'].min()-5, df['posNED_m_0'].max()+5], tickmode='linear', tick0=0, dtick=5),
                             zaxis=dict(range=[-df['posNED_m_2'].max()-5, -df['posNED_m_2'].min()+5], tickmode='linear', tick0=0, dtick=5),
+                            # xaxis=dict(range=[-100, 100], tickmode='linear', tick0=0, dtick=5),
+                            # yaxis=dict(range=[-100, 100], tickmode='linear', tick0=0, dtick=5),
+                            # zaxis=dict(range=[-10, 100], tickmode='linear', tick0=0, dtick=5),
+                            # xaxis=dict(tickmode='linear', tick0=0, dtick=5),
+                            # yaxis=dict(tickmode='linear', tick0=0, dtick=5),
+                            # zaxis=dict(tickmode='linear', tick0=0, dtick=5),
                             xaxis_title='y_East',
                             yaxis_title='x_North',
-                            zaxis_title='-z_Up'),
+                            zaxis_title='-z_Up',
+                            aspectmode='cube'),
                             height=630,
                             margin=dict(r=20, b=10, l=10, t=10),
                             sliders=sliders,
                             updatemenus=updatemenus,
                             ),
-                        frames=make_frames(df, animation_step_size)
+                        frames=make_frames(df, df_lidar, animation_step_size)
                         )
     except Exception as e:
         figure_3d = go.Figure(
@@ -1093,10 +1272,19 @@ def update_3d_graph_data(plot_data_value):
                 ))
         except Exception as e:
             print('[update_3d_graph_data::Flight_Path] ' + str(e))
-    if 'Lidar_PC' in plot_data_value:
+    # if 'Lidar_PC' in plot_data_value:
+    #     try:
+    #         figure_3d.add_trace(go.Scatter3d(
+    #             x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
+    #             name='Lidar Point Cloud',
+    #             mode='markers',
+    #             marker=dict(size=3)))
+    #     except Exception as e:
+    #         print('[update_3d_graph_data::Lidar_PC] ' + str(e))
+    if 'Lidar_PC' in plot_data_value: # TODO: move to lidar frame
         try:
             figure_3d.add_trace(go.Scatter3d(
-                x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
+                x=-df_lidar['x'], y=-df_lidar['z'], z=-df_lidar['y'],
                 name='Lidar Point Cloud',
                 mode='markers',
                 marker=dict(size=3)))
