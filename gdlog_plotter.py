@@ -236,7 +236,7 @@ app.layout = html.Div([
                     id='output_select_data_checklist',
                     options=[
                         {'label': 'Flight Path', 'value': 'Flight_Path'},
-                        {'label': 'Lidar Point Cloud', 'value': 'Lidar_PC'}],
+                        {'label': 'Lidar Point Cloud From Octomap', 'value': 'Lidar_PC'}],
                     labelStyle={'display': 'inline-block'},
                     style={'width': '66.7%', 
                            'display': 'inline-block'}
@@ -295,12 +295,12 @@ def hamilton_product(df, df_q1_name, df_q2_name, df_q3_name):
                                  df[df_q2_name+'_1']* df_q1_name[0] + df[df_q2_name+'_2']*-df_q1_name[1]
         df[df_q3_name+'_vq_3'] =                                      df[df_q2_name+'_0']*-df_q1_name[2] - \
                                  df[df_q2_name+'_1']*-df_q1_name[1] + df[df_q2_name+'_2']* df_q1_name[0]
-        df[df_q3_name+'_0'] =                                        df_q1_name[0]*df[df_q3_name+'_vq_0'] + \
-                              df_q1_name[1]*df[df_q3_name+'_vq_3'] - df_q1_name[2]*df[df_q3_name+'_vq_2']
-        df[df_q3_name+'_1'] =                                      - df_q1_name[0]*df[df_q3_name+'_vq_3'] + \
-                              df_q1_name[1]*df[df_q3_name+'_vq_0'] + df_q1_name[2]*df[df_q3_name+'_vq_1']
-        df[df_q3_name+'_2'] =                                        df_q1_name[0]*df[df_q3_name+'_vq_2'] - \
-                              df_q1_name[1]*df[df_q3_name+'_vq_1'] + df_q1_name[2]*df[df_q3_name+'_vq_0']
+        df[df_q3_name+'_0'] = df_q1_name[0]*df[df_q3_name+'_vq_1'] + df_q1_name[1]*df[df_q3_name+'_vq_0'] + \
+                              df_q1_name[2]*df[df_q3_name+'_vq_3'] - df_q1_name[3]*df[df_q3_name+'_vq_2']
+        df[df_q3_name+'_1'] = df_q1_name[0]*df[df_q3_name+'_vq_2'] - df_q1_name[1]*df[df_q3_name+'_vq_3'] + \
+                              df_q1_name[2]*df[df_q3_name+'_vq_0'] + df_q1_name[3]*df[df_q3_name+'_vq_1']
+        df[df_q3_name+'_2'] = df_q1_name[0]*df[df_q3_name+'_vq_3'] + df_q1_name[1]*df[df_q3_name+'_vq_2'] - \
+                              df_q1_name[2]*df[df_q3_name+'_vq_1'] + df_q1_name[3]*df[df_q3_name+'_vq_0']
     elif isinstance(df_q2_name, list) and (len(df_q2_name) == 4):  # q3 = hamilton_product(q1,q2), [q1: df, q2: list[4]]
         df[df_q3_name+'_0'] = df[df_q1_name+'_0']*df_q2_name[0] - df[df_q1_name+'_1']*df_q2_name[1] - \
                               df[df_q1_name+'_2']*df_q2_name[2] - df[df_q1_name+'_3']*df_q2_name[3]
@@ -755,10 +755,8 @@ def update_data_path_upload(path_upload_clicks, path_upload):
                 df_dateTimeLidarDiff = df_dateTimeLidarDiff[df_dateTimeLidarDiff['dateTimeLidar'].astype("timedelta64[ns]") > pd.Timedelta(0,'s')]
                 if not df_dateTimeLidarDiff.empty:
                     lidarIdxSynced = df_dateTimeLidarDiff['dateTimeLidar'].idxmin()
-                    # print(str(idx) + ', ' + str(lidarIdxSynced) + ', ' + str(df_dateTimeLidar['dateTimeLidar'][lidarIdxSynced]) + ', ' + str(df.dateTime[idx]))
                     df_frameIdxFilenames.loc[len(df_frameIdxFilenames)] = [idx, filenames[lidarIdxSynced]]
             df_frameIdxFilenames = df_frameIdxFilenames.drop_duplicates(['filename'], keep='first').reset_index(drop=True)
-            print(df_frameIdxFilenames.head(15))
 
             for idx in range(len(df_frameIdxFilenames)):
                 filename = df_frameIdxFilenames['filename'][idx]
@@ -774,8 +772,9 @@ def update_data_path_upload(path_upload_clicks, path_upload):
                         unpacked_chunk_list[3] = df_frameIdxFilenames['frameIdx'][idx]
                         unpacked_chunk_list_total.append(unpacked_chunk_list)
                     df_lidar = df_lidar.append(pd.DataFrame(unpacked_chunk_list_total, columns=['pos_0','pos_1','pos_2','frameIdx']))
-            print(df_lidar.head(10))
-            print(df_lidar.tail(10))
+            df_lidar['posBody_m_0'] = df_lidar['pos_0']
+            df_lidar['posBody_m_1'] = -df_lidar['pos_2']
+            df_lidar['posBody_m_2'] = df_lidar['pos_1']
 
         children_UploadOutput = 'done'
         prev_path_upload_clicks = path_upload_clicks
@@ -1111,53 +1110,31 @@ def make_plots_per_one_frame(df, df_lidar, idx):
 
     # Lidar PointCloud
     try: # idx = 0,50,100,...
-        df_lidarFrame = df_lidar[df_lidar['frameIdx'] == idx] # .reset_index(drop=True)
-        # print(df_lidarFrame.head(5))
-        # print(df_lidarFrame.tail(5))
-        # scatter3d_lidar = go.Scatter3d()
+        df_lidarFrame = df_lidar[df_lidar['frameIdx'] == idx]
         if df_lidarFrame.empty:
             scatter3d_lidar = go.Scatter3d(
                 x=[df['posNED_m_1'][idx]],
                 y=[df['posNED_m_0'][idx]],
                 z=[-df['posNED_m_2'][idx]],
                 name='frame_lidar',
-                # mode='lines',
-                # line=dict(color="black", width=4)
                 mode='markers',
                 marker=dict(color='black', size=3)
             )
             frame.append(scatter3d_lidar)
-        else: # require transform x,-z,y
-            df_lidarFrame['posBody_m_1'] = -df_lidarFrame['pos_2'] # TODO: move to upload lidar data
-            df_lidarFrame['posBody_m_0'] = df_lidarFrame['pos_0']
-            df_lidarFrame['posBody_m_2'] = df_lidarFrame['pos_1']
-            # hamilton_product(df_lidarFrame, [df['quat_0'][idx], df['quat_1'][idx], df['quat_2'][idx], df['quat_3'][idx]], 'posBody_m', 'quatPosBody_m')
-            # df_lidarFrame['posNED_m_1'] = df_lidarFrame['posBody_m_1'] + df['posNED_m_1'][idx]
-            # df_lidarFrame['posNED_m_0'] = df_lidarFrame['posBody_m_0'] + df['posNED_m_0'][idx]
-            # df_lidarFrame['posNED_m_2'] = df_lidarFrame['posBody_m_2'] + df['posNED_m_2'][idx]
-            # df_lidarFrame['posNED_m_1'] = df_lidarFrame['quatPosBody_m_1'] + df['posNED_m_1'][idx]
-            # df_lidarFrame['posNED_m_0'] = df_lidarFrame['quatPosBody_m_0'] + df['posNED_m_0'][idx]
-            # df_lidarFrame['posNED_m_2'] = df_lidarFrame['quatPosBody_m_2'] + df['posNED_m_2'][idx]
-             # TODO: Rotation Matrix to Quarternion
-            df_lidarFrame['posNED_m_1'] = df_lidarFrame['posBody_m_1'] * np.cos(np.deg2rad(df['rpy_deg_2'][idx])) + \
-                                          df_lidarFrame['posBody_m_0'] * np.sin(np.deg2rad(df['rpy_deg_2'][idx])) + \
-                                          df['posNED_m_1'][idx]
-            df_lidarFrame['posNED_m_0'] = df_lidarFrame['posBody_m_0'] * np.cos(np.deg2rad(df['rpy_deg_2'][idx])) - \
-                                          df_lidarFrame['posBody_m_1'] * np.sin(np.deg2rad(df['rpy_deg_2'][idx])) + \
-                                          df['posNED_m_0'][idx]
-            df_lidarFrame['posNED_m_2'] = df_lidarFrame['posBody_m_2'] + df['posNED_m_2'][idx]
+        else:
+            hamilton_product(df_lidarFrame, [df['quat_0'][idx], df['quat_1'][idx], df['quat_2'][idx], df['quat_3'][idx]], 'posBody_m', 'quatPosBody_m')
+            df_lidarFrame['posNED_m_0'] = df_lidarFrame['quatPosBody_m_0'] + df['posNED_m_0'][idx]
+            df_lidarFrame['posNED_m_1'] = df_lidarFrame['quatPosBody_m_1'] + df['posNED_m_1'][idx]
+            df_lidarFrame['posNED_m_2'] = df_lidarFrame['quatPosBody_m_2'] + df['posNED_m_2'][idx]
             scatter3d_lidar = go.Scatter3d(
                 x=df_lidarFrame['posNED_m_1'],
                 y=df_lidarFrame['posNED_m_0'],
                 z=-df_lidarFrame['posNED_m_2'],
                 name='frame_lidar',
-                # mode='lines',
-                # line=dict(color="black", width=4)
                 mode='markers',
                 marker=dict(color='black', size=3)
             )
             frame.append(scatter3d_lidar)
-        # frame.append(scatter3d_lidar)
     except Exception as e:
         print('[make_plots_per_one_frame::lidar_pointcloud] ' + str(e))
 
@@ -1220,12 +1197,6 @@ def update_3d_graph_data(plot_data_value):
                             xaxis=dict(range=[df['posNED_m_1'].min()-5, df['posNED_m_1'].max()+5], tickmode='linear', tick0=0, dtick=5),
                             yaxis=dict(range=[df['posNED_m_0'].min()-5, df['posNED_m_0'].max()+5], tickmode='linear', tick0=0, dtick=5),
                             zaxis=dict(range=[-df['posNED_m_2'].max()-5, -df['posNED_m_2'].min()+5], tickmode='linear', tick0=0, dtick=5),
-                            # xaxis=dict(range=[-100, 100], tickmode='linear', tick0=0, dtick=5),
-                            # yaxis=dict(range=[-100, 100], tickmode='linear', tick0=0, dtick=5),
-                            # zaxis=dict(range=[-10, 100], tickmode='linear', tick0=0, dtick=5),
-                            # xaxis=dict(tickmode='linear', tick0=0, dtick=5),
-                            # yaxis=dict(tickmode='linear', tick0=0, dtick=5),
-                            # zaxis=dict(tickmode='linear', tick0=0, dtick=5),
                             xaxis_title='y_East',
                             yaxis_title='x_North',
                             zaxis_title='-z_Up',
@@ -1272,19 +1243,10 @@ def update_3d_graph_data(plot_data_value):
                 ))
         except Exception as e:
             print('[update_3d_graph_data::Flight_Path] ' + str(e))
-    # if 'Lidar_PC' in plot_data_value:
-    #     try:
-    #         figure_3d.add_trace(go.Scatter3d(
-    #             x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
-    #             name='Lidar Point Cloud',
-    #             mode='markers',
-    #             marker=dict(size=3)))
-    #     except Exception as e:
-    #         print('[update_3d_graph_data::Lidar_PC] ' + str(e))
-    if 'Lidar_PC' in plot_data_value: # TODO: move to lidar frame
+    if 'Lidar_PC' in plot_data_value:
         try:
             figure_3d.add_trace(go.Scatter3d(
-                x=-df_lidar['x'], y=-df_lidar['z'], z=-df_lidar['y'],
+                x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
                 name='Lidar Point Cloud',
                 mode='markers',
                 marker=dict(size=3)))

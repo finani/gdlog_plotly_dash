@@ -42,6 +42,7 @@ prev_gps_clicks = 0
 prev_rpd_roll_clicks = 0
 prev_rpd_pitch_clicks = 0
 prev_rpd_down_clicks = 0
+prev_yaw_clicks = 0
 prev_vel_u_clicks = 0
 prev_vel_v_clicks = 0
 prev_vel_w_clicks = 0
@@ -103,6 +104,7 @@ csv_header_list = ['rosTime', 'flightMode', 'ctrlDeviceStatus',
                    'missionType', 'jobType',
                    'bladeTravelDistance',
                    'trajTimeCur', 'trajTimeMax', 'pad_1', 'pad_2', 'pad_3', 'pad_4']
+
 
 app.layout = html.Div([
     html.Div([
@@ -228,7 +230,7 @@ app.layout = html.Div([
                 id='output_select_data_checklist',
                 options=[
                     {'label': 'Flight Path', 'value': 'Flight_Path'},
-                    {'label': 'Lidar Point Cloud', 'value': 'Lidar_PC'}],
+                    {'label': 'Lidar Point Cloud From Octomap', 'value': 'Lidar_PC'}],
                 labelStyle={'display': 'inline-block'}
             ),
             dcc.Graph(id='graph_go_3d_pos')
@@ -532,11 +534,11 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
     global df
     if list_of_contents is not None:
-        confirm_msg, df_header_list_sorted, childrenLogStatus = \
+        confirm_msg, df_header_list_sorted, children_LogStatus = \
             parse_contents(list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
-        return options, options, True, confirm_msg, childrenLogStatus
+        return options, options, True, confirm_msg, children_LogStatus
 
 
 @app.callback(
@@ -745,7 +747,8 @@ def update_3d_graph_data(plot_data_value):
     figure_3d.update_layout(scene=dict(
         xaxis_title='y_East',
         yaxis_title='x_North',
-        zaxis_title='-z_Up'),
+        zaxis_title='-z_Up',
+        aspectmode='cube'),
         height=630,
         margin=dict(r=20, b=10, l=10, t=10))
     if 'Flight_Path' in plot_data_value:
