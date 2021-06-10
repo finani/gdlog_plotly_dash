@@ -114,7 +114,7 @@ if __name__ == '__main__':
         print("\tUsage: python3 gdlog_parser.py path_of_your_bin_file\n")
     elif len(sys.argv) == 2: # for all subfolder
         dir_path = sys.argv[1]
-        dir_path_included = '/'
+        dir_path_included = '_'
     elif len(sys.argv) == 3:
         dir_path = sys.argv[1]
         dir_path_included = sys.argv[2]
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     file_paths = []
     for root, dirs, filenames in os.walk(dir_path):
         for filename in filenames:
-            if dir_path_included in root and 'gdLog' in filename and 'bin' in filename:
+            if dir_path_included in root.split('/')[-1][0:7] and 'gdLog' in filename and 'bin' in filename:
                 gdlog_parser.run(root + '/' + filename)
                 file_paths.append(root + '/' + filename.split('.')[0] + '.csv')
 
