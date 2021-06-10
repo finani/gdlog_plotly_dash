@@ -1123,9 +1123,9 @@ def make_plots_per_one_frame(df, df_lidar, idx):
             frame.append(scatter3d_lidar)
         else:
             hamilton_product(df_lidarFrame, [df['quat_0'][idx], df['quat_1'][idx], df['quat_2'][idx], df['quat_3'][idx]], 'posBody_m', 'quatPosBody_m')
-            df_lidarFrame['posNED_m_0'] = df_lidarFrame['quatPosBody_m_0'] + df['posNED_m_0'][idx]
-            df_lidarFrame['posNED_m_1'] = df_lidarFrame['quatPosBody_m_1'] + df['posNED_m_1'][idx]
-            df_lidarFrame['posNED_m_2'] = df_lidarFrame['quatPosBody_m_2'] + df['posNED_m_2'][idx]
+            df_lidarFrame['posNED_m_0'] = df_lidarFrame['quatPosBody_m_0'] + df['posNED_m_0'][idx] - 0.1 # -0.1 (N)
+            df_lidarFrame['posNED_m_1'] = df_lidarFrame['quatPosBody_m_1'] + df['posNED_m_1'][idx] - 0.3 # +0.3 (W)
+            df_lidarFrame['posNED_m_2'] = df_lidarFrame['quatPosBody_m_2'] + df['posNED_m_2'][idx] - 0.2 # +0.2 (U)
             scatter3d_lidar = go.Scatter3d(
                 x=df_lidarFrame['posNED_m_1'],
                 y=df_lidarFrame['posNED_m_0'],
