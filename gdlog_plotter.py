@@ -351,7 +351,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
         df_header_list_sorted = []
-        if 'gdLog' in filename:
+        if 'gdLog' in filename or 'aSensorLog' in filename:
             if 'csv' in filename:
                 try:
                     df = pd.read_csv(io.StringIO(decoded.decode('utf-8')),
@@ -361,6 +361,9 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     print('[parse_contents::read_gdlog_csv] ' + str(e))
             elif 'bin' in filename:
                 try:
+                    logging_rate = 50
+                    if 'aSensorLog' in filename:
+                        logging_rate = filename.split('.')[0].split('_')[-1]
                     with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
                         if chr(decoded[0]) == 'n':
                             strFcLogVersion = str(decoded[1])
@@ -385,11 +388,11 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                             if data_count % 3000 == 0:
                                 print("data_count: " + str(data_count))
                             data_count += 1
-                        print("data_count: " + str(data_count) +
-                              ", total_time: " + str(data_count/50) + " s (50Hz)")
-                        print("Saved: " + f_csv.name)
+                        print('data_count: ' + str(data_count) +
+                              ', total_time: ' + str(data_count/logging_rate) + ' s (' + str(logging_rate) + 'Hz)')
+                        print('Saved: ' + f_csv.name)
                         parsing_log = parsing_log + 'data_count : ' + str(data_count) + \
-                            '\ntotal_time : ' + str(data_count/50) + ' s (50Hz)\n'
+                            '\ntotal_time : ' + str(data_count/logging_rate) + ' s (' + str(logging_rate) + 'Hz)\n'
                 except Exception as e:
                     print('[parse_contents::binary_parser] ' + str(e))
                 try:
@@ -418,6 +421,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df['dateTime'] = pd.to_datetime(df['rosTime'], unit='s') + \
                         pd.DateOffset(hours=9)
                     df['diffTime'] = df['rosTime'].diff()
+                    df['diffTimeHist'] = df['diffTime']
 
                 if 'posNed_0' in df.columns:
                     print('old_format_csv')
@@ -667,7 +671,6 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     np_pc = np_pc.astype(np.float)
                     np_pc = np_pc.reshape(-1, 3)
                     df_pc = pd.DataFrame(np_pc, columns=['x', 'y', 'z'])
-                    # df_pc = pd.concat([df_pc, pd.DataFrame(np_pc, columns=['x', 'y', 'z'])]) # Accumulate the lidar data
                     parsing_log = parsing_log + 'pointCloud csv file!\n'
                 except Exception as e:
                     print('[parse_contents::read_pointCloud_csv] ' + str(e))
@@ -919,8 +922,8 @@ def update_graph_data(df_header, df_header_2,
                          margin=dict(r=20, b=10, l=10, t=10))
     x_title = 'dateTime'
     try:
-        if 'diffTime' in df_header:
-            figure.add_trace(go.Histogram(x=df['diffTime']),
+        if 'diffTimeHist' in df_header:
+            figure.add_trace(go.Histogram(x=df['diffTimeHist']),
                                 row=1,
                                 col=1)
             config = dict({'displaylogo': False})
