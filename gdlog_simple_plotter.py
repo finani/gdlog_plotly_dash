@@ -267,7 +267,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 try:
                     logging_rate = 50
                     if 'aSensorLog' in filename:
-                        logging_rate = filename.split('.')[0].split('_')[-1]
+                        logging_rate = int(filename.split('.')[0].split('_')[-1])
                     with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
                         if chr(decoded[0]) == 'n':
                             strFcLogVersion = str(decoded[1])

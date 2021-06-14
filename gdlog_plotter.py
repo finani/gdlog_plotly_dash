@@ -363,7 +363,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 try:
                     logging_rate = 50
                     if 'aSensorLog' in filename:
-                        logging_rate = filename.split('.')[0].split('_')[-1]
+                        logging_rate = int(filename.split('.')[0].split('_')[-1])
                     with open(filename.split('.')[0] + '.csv', 'w', encoding='utf-8') as f_csv:
                         if chr(decoded[0]) == 'n':
                             strFcLogVersion = str(decoded[1])
@@ -914,8 +914,7 @@ def update_graph_data(df_header, df_header_2,
         prev_pos_d_clicks = pos_d_clicks
 
     figure = make_subplots(
-        rows=2,
-        cols=1,
+        specs=[[{"secondary_y": True}]],
         shared_xaxes=True
     )
     figure.update_layout(height=675,
@@ -923,9 +922,7 @@ def update_graph_data(df_header, df_header_2,
     x_title = 'dateTime'
     try:
         if 'diffTimeHist' in df_header:
-            figure.add_trace(go.Histogram(x=df['diffTimeHist']),
-                                row=1,
-                                col=1)
+            figure.add_trace(go.Histogram(x=df['diffTimeHist']))
             config = dict({'displaylogo': False})
             return figure, config
         else:
@@ -934,8 +931,7 @@ def update_graph_data(df_header, df_header_2,
                     x=df[x_title], y=df[y_title], name=y_title,
                     mode='lines',
                     line=dict(width=3)),
-                    row=1,
-                    col=1
+                    secondary_y=False
                 )
     except Exception as e:
         print('[update_graph_data::df_header_trace] ' + str(e))
@@ -945,12 +941,16 @@ def update_graph_data(df_header, df_header_2,
                 x=df[x_title], y=df[y_title], name=y_title,
                 mode='lines',
                 line=dict(width=3)),
-                row=2,
-                col=1
+                secondary_y=True
             )
     except Exception as e:
         print('[update_graph_data::df_header2_trace] ' + str(e))
     try:
+        plot_secondary_y = False
+        if (df_header is None) or (len(df_header) == 0):
+            plot_secondary_y = True
+        elif (df_header_2 is None) or (len(df_header_2) == 0):
+            plot_secondary_y = False
         for idx in range(len(fcMcMode_index)-1):
             figure.add_vrect(
                 x0=df.iloc[fcMcMode_index[idx]].dateTime,
@@ -960,7 +960,8 @@ def update_graph_data(df_header, df_header_2,
                 annotation_position="bottom left" if fcMcMode_value[idx]=='Guide' else "top left",
                 fillcolor=fcMcMode_color[idx],
                 layer="below",
-                opacity=0.2
+                opacity=0.2,
+                secondary_y=plot_secondary_y
             )
     except Exception as e:
         print('[update_graph_data::fcMcMode_vrect] ' + str(e))
