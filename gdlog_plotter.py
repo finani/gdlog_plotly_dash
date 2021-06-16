@@ -581,7 +581,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                                        'MISSION_TYPE_3_1', 'MISSION_TYPE_3_2', 'MISSION_TYPE_6_1',
                                        'MISSION_TYPE_6_2', 'MISSION_TYPE_6_1_SP', 'MISSION_TYPE_6_2_SP',
                                        'MISSION_TYPE_HI']
-                    strMissionType = listMissionType[df.missionType[fcMcMode_index[fcMcMode_value.index('Guide')]]]
+                    strMissionType = listMissionType[df.missionType[fcMcMode_index[fcMcMode_value.index('Standby')]]]
 
                 if 'jobType' in df.columns:
                     df.loc[df.jobType == 0, 'strJobType'] = 'INIT'
