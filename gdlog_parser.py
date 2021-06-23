@@ -111,7 +111,7 @@ if __name__ == '__main__':
     if len(sys.argv) == 1:  # for test run
         bin_path = "gdLog_210601_102129.bin"
         print("Test run gdlog_parser.py using \'gdLog_210601_102129.bin\'\n")
-        print("\tUsage: python3 gdlog_parser.py path_of_your_bin_file\n")
+        print("\tUsage: python3 gdlog_parser.py ~/log 210601\n")
     elif len(sys.argv) == 2: # for all subfolder
         dir_path = sys.argv[1]
         dir_path_included = '_'
@@ -120,7 +120,7 @@ if __name__ == '__main__':
         dir_path_included = sys.argv[2]
     else:
         raise SystemExit(
-            '\tUsage: python3 %s path_of_your_bin_file' % sys.argv[0])
+            '\tUsage: python3 gdlog_parser.py ~/log 210601\n')
 
     gdlog_parser = GDLOG_PARSER()
 
