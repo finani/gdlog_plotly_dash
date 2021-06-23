@@ -80,17 +80,17 @@ class GDLOG_PARSER:
             if chr(chunk[0]) == 'n':
                 self.fcLogVersion = chunk[1]
                 print(self.fcLogVersion)
-                FcLogHeaderSize = chunk[3] << 8 | chunk[2]
-                FcLogTypeListSize = chunk[5] << 8 | chunk[4]
-                FcLogDataSize = chunk[7] << 8 | chunk[6]
-                FcLogHeader = chunk[8:8+FcLogHeaderSize].decode('ascii')
-                FcLogTypeList = chunk[8+FcLogHeaderSize:8+FcLogHeaderSize+FcLogTypeListSize].decode('ascii')
+                fcLogHeaderSize = chunk[3] << 8 | chunk[2]
+                fcLogTypeListSize = chunk[5] << 8 | chunk[4]
+                fcLogDataSize = chunk[7] << 8 | chunk[6]
+                fcLogHeader = chunk[8:8+fcLogHeaderSize].decode('ascii')
+                fcLogTypeList = chunk[8+fcLogHeaderSize:8+fcLogHeaderSize+fcLogTypeListSize].decode('ascii')
 
-                self.csv_header_list = FcLogHeader.split(",")
-                self.bin_data_type = '='+FcLogTypeList # Byte order: native, Size: standard
-                self.bin_data_length = FcLogDataSize
+                self.csv_header_list = fcLogHeader.split(",")
+                self.bin_data_type = '='+fcLogTypeList # Byte order: native, Size: standard
+                self.bin_data_length = fcLogDataSize
 
-                chunk = chunk[8+FcLogHeaderSize+FcLogTypeListSize:]
+                chunk = chunk[8+fcLogHeaderSize+fcLogTypeListSize:]
             chunk = chunk[0:len(chunk)//self.bin_data_length*self.bin_data_length]
             print("data_number: " + str(len(chunk)//self.bin_data_length))
             data_count = 0

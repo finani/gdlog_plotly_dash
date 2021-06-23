@@ -272,17 +272,17 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                         if chr(decoded[0]) == 'n':
                             strFcLogVersion = str(decoded[1])
                             print("New_Format v" + strFcLogVersion)
-                            FcLogHeaderSize = decoded[3] << 8 | decoded[2]
-                            FcLogTypeListSize = decoded[5] << 8 | decoded[4]
-                            FcLogDataSize = decoded[7] << 8 | decoded[6]
-                            FcLogHeader = decoded[8:8+FcLogHeaderSize].decode('ascii')
-                            FcLogTypeList = decoded[8+FcLogHeaderSize:8+FcLogHeaderSize+FcLogTypeListSize].decode('ascii')
+                            fcLogHeaderSize = decoded[3] << 8 | decoded[2]
+                            fcLogTypeListSize = decoded[5] << 8 | decoded[4]
+                            fcLogDataSize = decoded[7] << 8 | decoded[6]
+                            fcLogHeader = decoded[8:8+fcLogHeaderSize].decode('ascii')
+                            fcLogTypeList = decoded[8+fcLogHeaderSize:8+fcLogHeaderSize+fcLogTypeListSize].decode('ascii')
 
-                            csv_header_list = FcLogHeader.split(",")
-                            bin_data_type = '='+FcLogTypeList # Byte order: native, Size: standard
-                            bin_data_length = FcLogDataSize
+                            csv_header_list = fcLogHeader.split(",")
+                            bin_data_type = '='+fcLogTypeList # Byte order: native, Size: standard
+                            bin_data_length = fcLogDataSize
 
-                            decoded = decoded[8+FcLogHeaderSize+FcLogTypeListSize:]
+                            decoded = decoded[8+fcLogHeaderSize+fcLogTypeListSize:]
                         chunk = decoded[0:len(decoded)//bin_data_length*bin_data_length]
                         data_count = 0
                         wr = csv.writer(f_csv)
