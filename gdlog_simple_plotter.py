@@ -538,7 +538,6 @@ def reset_pre_button_clicks():
     global prev_vel_u_clicks, prev_vel_v_clicks, prev_vel_w_clicks
     global prev_pos_n_clicks, prev_pos_e_clicks, prev_pos_d_clicks
 
-
     prev_mission_clicks = 0
     prev_gps_clicks = 0
     prev_rpd_roll_clicks = 0
@@ -551,7 +550,6 @@ def reset_pre_button_clicks():
     prev_pos_n_clicks = 0
     prev_pos_e_clicks = 0
     prev_pos_d_clicks = 0
-
 
 
 @app.callback(
