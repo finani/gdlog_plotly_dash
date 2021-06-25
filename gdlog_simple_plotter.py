@@ -491,7 +491,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 df_header_list_sorted = sorted(df.columns.tolist())
             except Exception as e:
                 print('[parse_contents::data_post_processing] ' + str(e))
-        elif 'pointCloud' in filename:
+        elif True: #'pointCloud' in filename:
             if 'csv' in filename:
                 try:
                     np_pc = np.loadtxt(io.StringIO(decoded.decode('utf-8')),
@@ -842,10 +842,12 @@ def update_3d_graph_data(plot_data_value):
     if 'Lidar_PC' in plot_data_value:
         try:
             figure_3d.add_trace(go.Scatter3d(
-                x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
+                # x=df_pc['y'], y=df_pc['x'], z=-df_pc['z'],
+                x=df_pc['x'], y=df_pc['y'], z=df_pc['z'],
                 name='Lidar Point Cloud',
                 mode='markers',
                 marker=dict(size=3)))
+            figure_3d.update_layout(height=1200)
         except Exception as e:
             print('[update_3d_graph_data::Lidar_PC] ' + str(e))
     config_3d = dict({'displaylogo': False})
