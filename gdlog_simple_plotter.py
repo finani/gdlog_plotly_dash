@@ -51,6 +51,7 @@ prev_pos_e_clicks = 0
 prev_pos_d_clicks = 0
 prev_submit_clicks = 0
 prev_slide_ranger_clicks = 0
+prev_button_flag = 0
 
 slide_ranger_toggle = True
 
@@ -226,12 +227,14 @@ app.layout = html.Div([
             dcc.Graph(id='graph_go')
         ]),
         dcc.Tab(label='3D Data Plot', children=[
-            dcc.Checklist(
-                id='output_select_data_checklist',
-                options=[
-                    {'label': 'Flight Path', 'value': 'Flight_Path'},
-                    {'label': 'Lidar Point Cloud From Octomap', 'value': 'Lidar_PC'}],
-                labelStyle={'display': 'inline-block'}
+            html.Div([
+                dcc.Checklist(
+                    id='output_select_data_checklist',
+                    options=[
+                        {'label': 'Flight Path', 'value': 'Flight_Path'},
+                        {'label': 'Lidar Point Cloud From Octomap', 'value': 'Lidar_PC'}],
+                    labelStyle={'display': 'inline-block'}
+                )]
             ),
             dcc.Graph(id='graph_go_3d_pos')
         ])
@@ -508,7 +511,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
             print('[parse_contents::make_string] ' + str(e))
         try:
             childrenLogStatus = html.P(
-                children=['[FcLogVersion] ㅤ',
+                children=['[fcLogVersion] ㅤ',
                           html.B(strFcLogVersion),
                           ' ㅤㅤㅤㅤ [fcType] ㅤ',
                           html.B(strFcType),
@@ -528,23 +531,66 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
     return confirm_msg, df_header_list_sorted, childrenLogStatus
 
 
+def reset_pre_button_clicks():
+    global prev_mission_clicks, prev_gps_clicks
+    global prev_rpd_roll_clicks, prev_rpd_pitch_clicks, prev_rpd_down_clicks
+    global prev_yaw_clicks
+    global prev_vel_u_clicks, prev_vel_v_clicks, prev_vel_w_clicks
+    global prev_pos_n_clicks, prev_pos_e_clicks, prev_pos_d_clicks
+
+
+    prev_mission_clicks = 0
+    prev_gps_clicks = 0
+    prev_rpd_roll_clicks = 0
+    prev_rpd_pitch_clicks = 0
+    prev_rpd_down_clicks = 0
+    prev_yaw_clicks = 0
+    prev_vel_u_clicks = 0
+    prev_vel_v_clicks = 0
+    prev_vel_w_clicks = 0
+    prev_pos_n_clicks = 0
+    prev_pos_e_clicks = 0
+    prev_pos_d_clicks = 0
+
+
+
 @app.callback(
     Output('io_data_dropdown', 'options'),
     Output('io_data_dropdown_2', 'options'),
     Output('confirm_parsing_data', 'displayed'),
     Output('confirm_parsing_data', 'message'),
     Output('output_log_status', 'children'),
+    Output('input_mission_button', 'n_clicks'),
+    Output('input_gps_button', 'n_clicks'),
+    Output('input_rpd_roll_button', 'n_clicks'),
+    Output('input_rpd_pitch_button', 'n_clicks'),
+    Output('input_rpd_down_button', 'n_clicks'),
+    Output('input_yaw_button', 'n_clicks'),
+    Output('input_vel_u_button', 'n_clicks'),
+    Output('input_vel_v_button', 'n_clicks'),
+    Output('input_vel_w_button', 'n_clicks'),
+    Output('input_pos_n_button', 'n_clicks'),
+    Output('input_pos_e_button', 'n_clicks'),
+    Output('input_pos_d_button', 'n_clicks'),
     Input('input_upload_data', 'contents'),
     State('input_upload_data', 'filename'),
     State('input_upload_data', 'last_modified')
 )
 def update_data_upload(list_of_contents, list_of_names, list_of_dates):
+    global prev_button_flag
     if list_of_contents is not None:
         confirm_msg, df_header_list_sorted, children_LogStatus = \
             parse_contents(list_of_contents, list_of_names, list_of_dates)
         options = [{'label': df_header, 'value': df_header}
                    for df_header in df_header_list_sorted]
-        return options, options, True, confirm_msg, children_LogStatus
+        reset_pre_button_clicks()
+        button_reset_list = [0,0,0,0,0,0,0,0,0,0,0,0]
+        button_reset_list[prev_button_flag] = 1
+        return options, options, True, confirm_msg, children_LogStatus,\
+            button_reset_list[0], button_reset_list[1], button_reset_list[2],\
+            button_reset_list[3], button_reset_list[4], button_reset_list[5],\
+            button_reset_list[6], button_reset_list[7], button_reset_list[8],\
+            button_reset_list[9], button_reset_list[10], button_reset_list[11]
 
 
 @app.callback(
@@ -626,55 +672,68 @@ def update_graph_data(df_header, df_header_2,
     global prev_yaw_clicks
     global prev_vel_u_clicks, prev_vel_v_clicks, prev_vel_w_clicks
     global prev_pos_n_clicks, prev_pos_e_clicks, prev_pos_d_clicks
+    global prev_button_flag
 
     if prev_mission_clicks != mission_clicks:
         df_header = ['jobSeq']
         df_header_2 = ['strJobType']
         prev_mission_clicks = mission_clicks
+        prev_button_flag = 0
     elif prev_gps_clicks != gps_clicks:
         df_header = ['nSat', 'gpsNSV']
         df_header_2 = ['strGpsFix']
         prev_gps_clicks = gps_clicks
+        prev_button_flag = 1
     elif prev_rpd_roll_clicks != rpd_roll_clicks:
         df_header = ['rpy_deg_0', 'rpdCmd_deg_deg_mps_0']
         df_header_2 = ['strCtrlStruct']
         prev_rpd_roll_clicks = rpd_roll_clicks
+        prev_button_flag = 2
     elif prev_rpd_pitch_clicks != rpd_pitch_clicks:
         df_header = ['rpy_deg_1', 'rpdCmd_deg_deg_mps_1']
         df_header_2 = ['strCtrlStruct']
         prev_rpd_pitch_clicks = rpd_pitch_clicks
+        prev_button_flag = 3
     elif prev_rpd_down_clicks != rpd_down_clicks:
         df_header = ['velUVW_mps_2', 'velCmdUVW_mps_2']
         df_header_2 = ['strCtrlStruct']
         prev_rpd_down_clicks = rpd_down_clicks
+        prev_button_flag = 4
     elif prev_yaw_clicks != yaw_clicks:
         df_header = ['rpy_deg_2', 'yawSp_deg']
         df_header_2 = ['strCtrlStruct']
         prev_yaw_clicks = yaw_clicks
+        prev_button_flag = 5
     elif prev_vel_u_clicks != vel_u_clicks:
         df_header = ['velUVW_mps_0', 'velCmdUVW_mps_0']
         df_header_2 = ['strCtrlStruct']
         prev_vel_u_clicks = vel_u_clicks
+        prev_button_flag = 6
     elif prev_vel_v_clicks != vel_v_clicks:
         df_header = ['velUVW_mps_1', 'velCmdUVW_mps_1']
         df_header_2 = ['strCtrlStruct']
         prev_vel_v_clicks = vel_v_clicks
+        prev_button_flag = 7
     elif prev_vel_w_clicks != vel_w_clicks:
         df_header = ['velUVW_mps_2', 'velCmdUVW_mps_2']
         df_header_2 = ['strCtrlStruct']
         prev_vel_w_clicks = vel_w_clicks
+        prev_button_flag = 8
     elif prev_pos_n_clicks != pos_n_clicks:
         df_header = ['posNED_m_0', 'posCmdNED_m_0']
         df_header_2 = ['strCtrlStruct']
         prev_pos_n_clicks = pos_n_clicks
+        prev_button_flag = 9
     elif prev_pos_e_clicks != pos_e_clicks:
         df_header = ['posNED_m_1', 'posCmdNED_m_1']
         df_header_2 = ['strCtrlStruct']
         prev_pos_e_clicks = pos_e_clicks
+        prev_button_flag = 10
     elif prev_pos_d_clicks != pos_d_clicks:
         df_header = ['posNED_m_2', 'posCmdNED_m_2']
         df_header_2 = ['strCtrlStruct']
         prev_pos_d_clicks = pos_d_clicks
+        prev_button_flag = 11
 
     figure = make_subplots(
         specs=[[{"secondary_y": True}]],
