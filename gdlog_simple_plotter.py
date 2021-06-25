@@ -844,8 +844,13 @@ def update_3d_graph_data(plot_data_value):
                 x=df_pc['x'], y=df_pc['y'], z=df_pc['z'],
                 name='Lidar Point Cloud',
                 mode='markers',
-                marker=dict(size=3)))
-            figure_3d.update_layout(height=1200)
+                marker=dict(size=2)))
+            figure_3d.update_layout(scene=dict(
+                xaxis_title='x',
+                yaxis_title='y',
+                zaxis_title='z',
+                aspectmode='data'), 
+                height=1200)
         except Exception as e:
             print('[update_3d_graph_data::Lidar_PC] ' + str(e))
     config_3d = dict({'displaylogo': False})
