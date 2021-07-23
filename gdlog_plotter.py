@@ -632,6 +632,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df.loc[df.ctrlSpType == 8, 'strCtrlSpType'] = 'UVW_VEL'
                     df.loc[df.ctrlSpType == 9, 'strCtrlSpType'] = 'EULER_ATT'
                     df.loc[df.ctrlSpType == 10, 'strCtrlSpType'] = 'TRAJ_VEC'
+                    df.loc[df.ctrlSpType == 11, 'strCtrlSpType'] = 'XYZ_VEL'
 
                 if 'ctrlOpType' in df.columns:
                     df.loc[df.ctrlOpType == 0, 'strCtrlOpType'] = 'CTRL_VECTYPE_NONE'
@@ -645,6 +646,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                     df.loc[df.ctrlOpType == 8, 'strCtrlOpType'] = 'UVW_VEL'
                     df.loc[df.ctrlOpType == 9, 'strCtrlOpType'] = 'EULER_ATT'
                     df.loc[df.ctrlOpType == 10, 'strCtrlOpType'] = 'TRAJ_VEC'
+                    df.loc[df.ctrlOpType == 11, 'strCtrlOpType'] = 'XYZ_VEL'
 
                 if 'yawOpType' in df.columns:
                     df.loc[df.yawOpType == 0, 'strYawOpType'] = 'ANGLE_REL'
