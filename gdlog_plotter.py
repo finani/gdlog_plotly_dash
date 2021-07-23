@@ -1246,13 +1246,13 @@ def update_3d_graph_data(plot_data_value):
     try:
         figure_3d = go.Figure(data=make_plots_per_one_frame(df, df_lidar, 0),
                         layout=go.Layout(scene=dict(
-                            xaxis=dict(range=[df['posNED_m_1'].min()-5, df['posNED_m_1'].max()+5], tickmode='linear', tick0=0, dtick=5),
-                            yaxis=dict(range=[df['posNED_m_0'].min()-5, df['posNED_m_0'].max()+5], tickmode='linear', tick0=0, dtick=5),
-                            zaxis=dict(range=[-df['posNED_m_2'].max()-5, -df['posNED_m_2'].min()+5], tickmode='linear', tick0=0, dtick=5),
+                            # xaxis=dict(range=[df['posNED_m_1'].min()-5, df['posNED_m_1'].max()+5], tickmode='linear', tick0=0, dtick=5),
+                            # yaxis=dict(range=[df['posNED_m_0'].min()-5, df['posNED_m_0'].max()+5], tickmode='linear', tick0=0, dtick=5),
+                            # zaxis=dict(range=[-df['posNED_m_2'].max()-5, -df['posNED_m_2'].min()+5], tickmode='linear', tick0=0, dtick=5),
                             xaxis_title='y_East',
                             yaxis_title='x_North',
                             zaxis_title='-z_Up',
-                            aspectmode='cube'),
+                            aspectmode='data'),
                             height=630,
                             margin=dict(r=20, b=10, l=10, t=10),
                             sliders=sliders,

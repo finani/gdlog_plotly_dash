@@ -813,7 +813,7 @@ def update_3d_graph_data(plot_data_value):
         xaxis_title='y_East',
         yaxis_title='x_North',
         zaxis_title='-z_Up',
-        aspectmode='cube'),
+        aspectmode='data'),
         height=630,
         margin=dict(r=20, b=10, l=10, t=10))
     if 'Flight_Path' in plot_data_value:
