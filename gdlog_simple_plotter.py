@@ -43,9 +43,9 @@ prev_rpd_roll_clicks = 0
 prev_rpd_pitch_clicks = 0
 prev_rpd_down_clicks = 0
 prev_yaw_clicks = 0
-prev_vel_u_clicks = 0
-prev_vel_v_clicks = 0
-prev_vel_w_clicks = 0
+prev_vel_x_clicks = 0
+prev_vel_y_clicks = 0
+prev_vel_d_clicks = 0
 prev_pos_n_clicks = 0
 prev_pos_e_clicks = 0
 prev_pos_d_clicks = 0
@@ -535,7 +535,7 @@ def reset_pre_button_clicks():
     global prev_mission_clicks, prev_gps_clicks
     global prev_rpd_roll_clicks, prev_rpd_pitch_clicks, prev_rpd_down_clicks
     global prev_yaw_clicks
-    global prev_vel_u_clicks, prev_vel_v_clicks, prev_vel_w_clicks
+    global prev_vel_x_clicks, prev_vel_y_clicks, prev_vel_d_clicks
     global prev_pos_n_clicks, prev_pos_e_clicks, prev_pos_d_clicks
 
     prev_mission_clicks = 0
@@ -544,9 +544,9 @@ def reset_pre_button_clicks():
     prev_rpd_pitch_clicks = 0
     prev_rpd_down_clicks = 0
     prev_yaw_clicks = 0
-    prev_vel_u_clicks = 0
-    prev_vel_v_clicks = 0
-    prev_vel_w_clicks = 0
+    prev_vel_x_clicks = 0
+    prev_vel_y_clicks = 0
+    prev_vel_d_clicks = 0
     prev_pos_n_clicks = 0
     prev_pos_e_clicks = 0
     prev_pos_d_clicks = 0
@@ -668,7 +668,7 @@ def update_graph_data(df_header, df_header_2,
     global prev_mission_clicks, prev_gps_clicks
     global prev_rpd_roll_clicks, prev_rpd_pitch_clicks, prev_rpd_down_clicks
     global prev_yaw_clicks
-    global prev_vel_u_clicks, prev_vel_v_clicks, prev_vel_w_clicks
+    global prev_vel_x_clicks, prev_vel_y_clicks, prev_vel_d_clicks
     global prev_pos_n_clicks, prev_pos_e_clicks, prev_pos_d_clicks
     global prev_button_flag
 
@@ -702,20 +702,20 @@ def update_graph_data(df_header, df_header_2,
         df_header_2 = ['strCtrlStruct']
         prev_yaw_clicks = yaw_clicks
         prev_button_flag = 5
-    elif prev_vel_u_clicks != vel_u_clicks:
-        df_header = ['velUVW_mps_0', 'velCmdUVW_mps_0']
+    elif prev_vel_x_clicks != vel_u_clicks:
+        df_header = ['velHdg_mps_0', 'velCmdHdg_mps_0']
         df_header_2 = ['strCtrlStruct']
-        prev_vel_u_clicks = vel_u_clicks
+        prev_vel_x_clicks = vel_u_clicks
         prev_button_flag = 6
-    elif prev_vel_v_clicks != vel_v_clicks:
-        df_header = ['velUVW_mps_1', 'velCmdUVW_mps_1']
+    elif prev_vel_y_clicks != vel_v_clicks:
+        df_header = ['velHdg_mps_1', 'velCmdHdg_mps_1']
         df_header_2 = ['strCtrlStruct']
-        prev_vel_v_clicks = vel_v_clicks
+        prev_vel_y_clicks = vel_v_clicks
         prev_button_flag = 7
-    elif prev_vel_w_clicks != vel_w_clicks:
-        df_header = ['velUVW_mps_2', 'velCmdUVW_mps_2']
+    elif prev_vel_d_clicks != vel_w_clicks:
+        df_header = ['velHdg_mps_2', 'velCmdHdg_mps_2']
         df_header_2 = ['strCtrlStruct']
-        prev_vel_w_clicks = vel_w_clicks
+        prev_vel_d_clicks = vel_w_clicks
         prev_button_flag = 8
     elif prev_pos_n_clicks != pos_n_clicks:
         df_header = ['posNED_m_0', 'posCmdNED_m_0']
