@@ -261,8 +261,7 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
         if 'gdLog' in filename or 'aSensorLog' in filename:
             if 'csv' in filename:
                 try:
-                    df = pd.read_csv(io.StringIO(decoded.decode('utf-8')),
-                                     low_memory=False)
+                    df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
                     parsing_log = parsing_log + 'gdLog csv file!\n'
                 except Exception as e:
                     print('[parse_contents::read_gdlog_csv] ' + str(e))
