@@ -261,7 +261,9 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
         if 'gdLog' in filename or 'aSensorLog' in filename:
             if 'csv' in filename:
                 try:
-                    df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+                    tp = pd.read_csv(io.StringIO(decoded.decode('utf-8')), 
+                                     iterator=True, chunksize=1000, low_memory=False)
+                    df = pd.concat(tp, ignore_index=True)
                     parsing_log = parsing_log + 'gdLog csv file!\n'
                 except Exception as e:
                     print('[parse_contents::read_gdlog_csv] ' + str(e))
@@ -316,9 +318,8 @@ def parse_contents(list_of_contents, list_of_names, list_of_dates):
                 # dataFrame Post-Processing
             try:
                 if len(df) > 0:
-                    # Ignore data before 2020 January 1st Wednesday AM 1:00:00
-                    df = df[df['rosTime'] > 1577840400]
                     df = df.drop([0])  # delete data with initial value
+                    df = df[df['rosTime'] > 1577840400] # Ignore data before 2020 January 1st Wednesday AM 1:00:00
                     df = df.dropna(axis=0)  # delete data with NaN
                     df = df.reset_index(drop=True)
                     df.columns = df.columns.str.strip()
